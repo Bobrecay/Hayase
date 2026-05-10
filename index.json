@@ -3,11 +3,14 @@
     "name": "SubsPlease",
     "id": "subsplease",
     "version": "1.0.0",
-    "description": "Anime torrent source from SubsPlease (1080p, 720p, SD)",
+    "description": "Anime torrent source from SubsPlease (1080p only)",
     "type": "torrent",
     "accuracy": "high",
+    "ratio": 0,
+    "media": "both",
+    "languages": ["US", "JP"],
     "icon": "https://subsplease.org/favicon.ico",
-    "update": "https://raw.githubusercontent.com/Bobrecay/Hayase/refs/heads/main/index.json",
-    "code": "https://raw.githubusercontent.com/Bobrecay/Hayase/refs/heads/main/subsplease.js"
+    "update": "gh:Bobrecay/Hayase",
+    "code": "gh:Bobrecay/Hayase/subsplease"
   }
 ]
