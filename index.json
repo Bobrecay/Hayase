@@ -11,6 +11,6 @@
     "languages": ["US", "JP"],
     "icon": "https://subsplease.org/favicon.ico",
     "update": "https://raw.githubusercontent.com/Bobrecay/Hayase/main/index.json",
-    "code": "https://raw.githubusercontent.com/Bobrecay/Hayase/main/subsplease.js"
+    "code": "https://raw.githubusercontent.com/Bobrecay/Hayase/main/nyaa.js"
   }
 ]
