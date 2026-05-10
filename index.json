@@ -7,7 +7,7 @@
     "type": "torrent",
     "accuracy": "high",
     "icon": "https://subsplease.org/favicon.ico",
-    "update": "gh:Bobrecay/Hayase/main/index.json",
-    "code": "gh:Bobrecay/Hayase/main/subsplease.js"
+    "update": "https://raw.githubusercontent.com/Bobrecay/Hayase/refs/heads/main/index.json",
+    "code": "https://raw.githubusercontent.com/Bobrecay/Hayase/refs/heads/main/subsplease.js"
   }
 ]
