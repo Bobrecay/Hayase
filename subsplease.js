@@ -1,11 +1,11 @@
-function hashFromMagnet (magnet) {
+function hashFromMagnet(magnet) {
   const match = magnet.match(/urn:btih:([a-fA-F0-9]{40}|[a-zA-Z2-7]{32})/i)
   return match ? match[1].toLowerCase() : ''
 }
 
-async function searchSubsPlease (searchQuery) {
-  const url = `https://subsplease.org/api/?f=search&tz=UTC&s=${encodeURIComponent(searchQuery)}`
-  const res = await fetch(url)
+async function search(fetchFn, query) {
+  const url = `https://subsplease.org/api/?f=search&tz=UTC&s=${encodeURIComponent(query)}`
+  const res = await fetchFn(url)
   if (!res.ok) throw new Error(`SubsPlease API error: ${res.status}`)
 
   const data = await res.json()
@@ -38,8 +38,8 @@ async function searchSubsPlease (searchQuery) {
   return results
 }
 
-export default class SubsPlease {
-  async test () {
+export default new class {
+  async test() {
     try {
       const res = await fetch('https://subsplease.org/api/?f=latest&tz=UTC')
       return res.ok
@@ -48,24 +48,18 @@ export default class SubsPlease {
     }
   }
 
-  // Called for single episode searches
-  async single (query) {
-    const title = query.titles?.[0] ?? ''
-    const episode = query.episode != null
-      ? String(query.episode).padStart(2, '0')
-      : ''
-    return searchSubsPlease(episode ? `${title} ${episode}` : title)
+  async single({ titles, episode, fetch: fetchFn }) {
+    const title = titles?.[0] ?? ''
+    const ep = episode != null ? String(episode).padStart(2, '0') : ''
+    return search(fetchFn, ep ? `${title} ${ep}` : title)
   }
 
-  // Called for batch/season searches
-  async batch (query) {
-    const title = query.titles?.[0] ?? ''
-    return searchSubsPlease(title)
+  async batch({ titles, fetch: fetchFn }) {
+    return search(fetchFn, titles?.[0] ?? '')
   }
 
-  // Called for movie searches
-  async movie (query) {
-    const title = query.titles?.[0] ?? ''
-    return searchSubsPlease(title)
+  async movie({ titles, fetch: fetchFn }) {
+    return search(fetchFn, titles?.[0] ?? '')
   }
 }
+

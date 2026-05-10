@@ -1,16 +1,16 @@
 [
   {
-    "id": "subsplease",
+    "manifestVersion": 2,
     "name": "SubsPlease",
+    "id": "subsplease",
     "version": "1.0.0",
     "type": "torrent",
     "accuracy": "high",
-    "updatePeers": true,
     "ratio": 0,
-    "media": "both",
+    "media": "sub",
+    "updatePeers": true,
     "languages": ["US"],
-    "nsfw": false,
-    "icon": "https://nyaa.si/static/favicon.png",
+    "icon": "https://subsplease.org/favicon.ico",
     "update": "https://raw.githubusercontent.com/Bobrecay/Hayase/main/index.json",
     "code": "https://raw.githubusercontent.com/Bobrecay/Hayase/main/subsplease.js"
   }
