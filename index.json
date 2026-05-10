@@ -1,0 +1,13 @@
+[
+  {
+    "name": "SubsPlease",
+    "id": "subsplease",
+    "version": "1.0.0",
+    "description": "Anime torrent source from SubsPlease (1080p, 720p, SD)",
+    "type": "torrent",
+    "accuracy": "high",
+    "icon": "https://subsplease.org/favicon.ico",
+    "update": "gh:YOUR_USERNAME/YOUR_REPO",
+    "code": "gh:YOUR_USERNAME/YOUR_REPO/subsplease"
+  }
+]
