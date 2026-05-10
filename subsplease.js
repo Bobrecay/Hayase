@@ -16,7 +16,6 @@ function parseSize(sizeStr) {
 }
 
 async function searchRSS(query) {
-  // Magnet feed (?r=1080) includes <torrent:magnetURI>; torrent feed (?t&r=1080) does not
   const url = `https://subsplease.org/rss/?r=1080&s=${encodeURIComponent(query)}`
   const res = await fetch(url)
   if (!res.ok) throw new Error(`SubsPlease RSS error: ${res.status}`)
@@ -53,6 +52,20 @@ async function searchRSS(query) {
   return results
 }
 
+// Try each title in order, return first non-empty result.
+// SubsPlease uses romaji names, so we try all titles Hayase provides
+// since we don't know which index is romaji.
+async function searchWithFallback(titles, ep) {
+  const ep2 = ep != null ? String(ep).padStart(2, '0') : ''
+  for (const title of titles) {
+    if (!title) continue
+    const query = ep2 ? `${title} ${ep2}` : title
+    const results = await searchRSS(query)
+    if (results.length > 0) return results
+  }
+  return []
+}
+
 export default new class {
   async test() {
     try {
@@ -64,17 +77,14 @@ export default new class {
   }
 
   async single({ titles, episode }) {
-    // titles[0] is romaji — the format SubsPlease uses in their release names
-    const title = titles?.[0] ?? ''
-    const ep = episode != null ? String(episode).padStart(2, '0') : ''
-    return searchRSS(ep ? `${title} ${ep}` : title)
+    return searchWithFallback(titles ?? [], episode)
   }
 
   async batch({ titles }) {
-    return searchRSS(titles?.[0] ?? '')
+    return searchWithFallback(titles ?? [], null)
   }
 
   async movie({ titles }) {
-    return searchRSS(titles?.[0] ?? '')
+    return searchWithFallback(titles ?? [], null)
   }
 }
