@@ -8,7 +8,7 @@
     "updatePeers": true,
     "ratio": 0,
     "media": "both",
-    "languages": ["ALL"],
+    "languages": ["US"],
     "nsfw": false,
     "icon": "https://nyaa.si/static/favicon.png",
     "update": "https://raw.githubusercontent.com/Bobrecay/Hayase/main/index.json",
