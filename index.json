@@ -7,7 +7,7 @@
     "type": "torrent",
     "accuracy": "high",
     "icon": "https://subsplease.org/favicon.ico",
-    "update": "gh:YOUR_USERNAME/YOUR_REPO",
-    "code": "gh:YOUR_USERNAME/YOUR_REPO/subsplease"
+    "update": "gh:Bobrecay/Hayase",
+    "code": "gh:Bobrecay/Hayase/subsplease"
   }
 ]
