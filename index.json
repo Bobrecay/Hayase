@@ -10,7 +10,7 @@
     "media": "both",
     "languages": ["US", "JP"],
     "icon": "https://subsplease.org/favicon.ico",
-    "update": "gh:Bobrecay/Hayase",
-    "code": "gh:Bobrecay/Hayase/subsplease"
+    "update": "https://raw.githubusercontent.com/Bobrecay/Hayase/main/index.json",
+    "code": "https://raw.githubusercontent.com/Bobrecay/Hayase/main/subsplease.js"
   }
 ]
