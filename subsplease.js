@@ -16,7 +16,8 @@ function parseSize(sizeStr) {
 }
 
 async function searchRSS(query) {
-  const url = `https://subsplease.org/rss/?t&r=1080&s=${encodeURIComponent(query)}`
+  // Magnet feed (?r=1080) includes <torrent:magnetURI>; torrent feed (?t&r=1080) does not
+  const url = `https://subsplease.org/rss/?r=1080&s=${encodeURIComponent(query)}`
   const res = await fetch(url)
   if (!res.ok) throw new Error(`SubsPlease RSS error: ${res.status}`)
   const text = await res.text()
@@ -29,13 +30,10 @@ async function searchRSS(query) {
       ?? item.match(/<title>(.*?)<\/title>/)?.[1]
     const magnet = item.match(/<torrent:magnetURI><!\[CDATA\[(.*?)\]\]><\/torrent:magnetURI>/)?.[1]
       ?? item.match(/<torrent:magnetURI>(.*?)<\/torrent:magnetURI>/)?.[1]
-    const torrentLink = item.match(/<link>(.*?)<\/link>/)?.[1]
-    const sizeStr = item.match(/<torrent:contentLength>(.*?)<\/torrent:contentLength>/)?.[1]
-      ?? item.match(/<nyaa:size>(.*?)<\/nyaa:size>/)?.[1]
+    const sizeStr = item.match(/<subsplease:size>(.*?)<\/subsplease:size>/)?.[1]
     const pubDate = item.match(/<pubDate>(.*?)<\/pubDate>/)?.[1]
 
     if (!title || !magnet) continue
-
     const hash = hashFromMagnet(magnet)
     if (!hash) continue
 
@@ -58,7 +56,7 @@ async function searchRSS(query) {
 export default new class {
   async test() {
     try {
-      const res = await fetch('https://subsplease.org/rss/?t&r=1080')
+      const res = await fetch('https://subsplease.org/rss/?r=1080')
       return res.ok
     } catch {
       return false
@@ -66,6 +64,7 @@ export default new class {
   }
 
   async single({ titles, episode }) {
+    // titles[0] is romaji — the format SubsPlease uses in their release names
     const title = titles?.[0] ?? ''
     const ep = episode != null ? String(episode).padStart(2, '0') : ''
     return searchRSS(ep ? `${title} ${ep}` : title)
@@ -79,4 +78,3 @@ export default new class {
     return searchRSS(titles?.[0] ?? '')
   }
 }
-
