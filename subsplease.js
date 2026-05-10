@@ -3,36 +3,53 @@ function hashFromMagnet(magnet) {
   return match ? match[1].toLowerCase() : ''
 }
 
-async function search(fetchFn, query) {
-  const url = `https://subsplease.org/api/?f=search&tz=UTC&s=${encodeURIComponent(query)}`
-  const res = await fetchFn(url)
-  if (!res.ok) throw new Error(`SubsPlease API error: ${res.status}`)
+function parseSize(sizeStr) {
+  if (!sizeStr) return 0
+  const match = sizeStr.match(/([\d.]+)\s*(GiB|MiB|KiB|GB|MB|KB)/i)
+  if (!match) return 0
+  const num = parseFloat(match[1])
+  const unit = match[2].toUpperCase()
+  if (unit === 'GIB' || unit === 'GB') return Math.round(num * 1024 * 1024 * 1024)
+  if (unit === 'MIB' || unit === 'MB') return Math.round(num * 1024 * 1024)
+  if (unit === 'KIB' || unit === 'KB') return Math.round(num * 1024)
+  return 0
+}
 
-  const data = await res.json()
+async function searchRSS(query) {
+  const url = `https://subsplease.org/rss/?t&r=1080&s=${encodeURIComponent(query)}`
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`SubsPlease RSS error: ${res.status}`)
+  const text = await res.text()
+
   const results = []
+  const items = text.split('<item>').slice(1)
 
-  for (const entry of Object.values(data)) {
-    const { show, episode, downloads } = entry
-    if (!downloads?.length) continue
+  for (const item of items) {
+    const title = item.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/)?.[1]
+      ?? item.match(/<title>(.*?)<\/title>/)?.[1]
+    const magnet = item.match(/<torrent:magnetURI><!\[CDATA\[(.*?)\]\]><\/torrent:magnetURI>/)?.[1]
+      ?? item.match(/<torrent:magnetURI>(.*?)<\/torrent:magnetURI>/)?.[1]
+    const torrentLink = item.match(/<link>(.*?)<\/link>/)?.[1]
+    const sizeStr = item.match(/<torrent:contentLength>(.*?)<\/torrent:contentLength>/)?.[1]
+      ?? item.match(/<nyaa:size>(.*?)<\/nyaa:size>/)?.[1]
+    const pubDate = item.match(/<pubDate>(.*?)<\/pubDate>/)?.[1]
 
-    for (const dl of downloads) {
-      if (dl.res !== '1080') continue
+    if (!title || !magnet) continue
 
-      const hash = hashFromMagnet(dl.magnet)
-      if (!hash) continue
+    const hash = hashFromMagnet(magnet)
+    if (!hash) continue
 
-      results.push({
-        title: `[SubsPlease] ${show} - ${episode} (1080p)`,
-        link: dl.magnet,
-        hash,
-        seeders: 0,
-        leechers: 0,
-        downloads: 0,
-        accuracy: 'high',
-        size: 0,
-        date: new Date()
-      })
-    }
+    results.push({
+      title,
+      link: magnet,
+      hash,
+      seeders: 0,
+      leechers: 0,
+      downloads: 0,
+      accuracy: 'high',
+      size: parseSize(sizeStr),
+      date: pubDate ? new Date(pubDate) : new Date()
+    })
   }
 
   return results
@@ -41,25 +58,25 @@ async function search(fetchFn, query) {
 export default new class {
   async test() {
     try {
-      const res = await fetch('https://subsplease.org/api/?f=latest&tz=UTC')
+      const res = await fetch('https://subsplease.org/rss/?t&r=1080')
       return res.ok
     } catch {
       return false
     }
   }
 
-  async single({ titles, episode, fetch: fetchFn }) {
+  async single({ titles, episode }) {
     const title = titles?.[0] ?? ''
     const ep = episode != null ? String(episode).padStart(2, '0') : ''
-    return search(fetchFn, ep ? `${title} ${ep}` : title)
+    return searchRSS(ep ? `${title} ${ep}` : title)
   }
 
-  async batch({ titles, fetch: fetchFn }) {
-    return search(fetchFn, titles?.[0] ?? '')
+  async batch({ titles }) {
+    return searchRSS(titles?.[0] ?? '')
   }
 
-  async movie({ titles, fetch: fetchFn }) {
-    return search(fetchFn, titles?.[0] ?? '')
+  async movie({ titles }) {
+    return searchRSS(titles?.[0] ?? '')
   }
 }
 
