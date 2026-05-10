@@ -11,7 +11,7 @@
     "languages": ["ALL"],
     "nsfw": false,
     "icon": "https://nyaa.si/static/favicon.png",
-    "update": "https://raw.githubusercontent.com/450omenz/hayase-extensions/main/index.json",
+    "update": "https://raw.githubusercontent.com/Bobrecay/Hayase/main/index.json",
     "code": "https://raw.githubusercontent.com/450omenz/hayase-extensions/main/nyaa.js"
   }
 ]
