@@ -1,8 +1,8 @@
 [
   {
-    "id": "badomen.extension.nyaa",
-    "name": "Nyaa.si",
-    "version": "1.0.1",
+    "id": "subsplease",
+    "name": "SubsPlease",
+    "version": "1.0.0",
     "type": "torrent",
     "accuracy": "medium",
     "updatePeers": true,
