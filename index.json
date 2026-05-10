@@ -4,7 +4,7 @@
     "name": "SubsPlease",
     "version": "1.0.0",
     "type": "torrent",
-    "accuracy": "medium",
+    "accuracy": "high",
     "updatePeers": true,
     "ratio": 0,
     "media": "both",
