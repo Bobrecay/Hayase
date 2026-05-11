@@ -29,29 +29,73 @@ export default new class SubsPlease {
     })
   }
 
+  async search(query, episode) {
+    const res = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(query)}`)
+    return this.parse(await res.json(), episode)
+  }
+
+  buildQueries(titles, season) {
+    const queries = [...titles]
+    // If a season is detected in any title (e.g. "Season 2", "2nd Season"), also try S2 style
+    if (season && season > 1) {
+      const base = titles[0].replace(/\s*(season\s*\d+|\d+(st|nd|rd|th)\s*season|S\d+)\s*/gi, '').trim()
+      queries.push(`${base} S${season}`)
+      queries.push(`${base} Season ${season}`)
+      queries.push(`${base} Part ${season}`)
+    }
+    return [...new Set(queries)]
+  }
+
+  detectSeason(titles) {
+    for (const title of titles) {
+      const s = title.match(/(?:Season\s*|S)(\d+)/i) || title.match(/(\d+)(?:st|nd|rd|th)\s*Season/i)
+      if (s) return Number(s[1])
+    }
+    return null
+  }
+
   async single({ titles, episode }) {
     if (!navigator.onLine) return []
     const ep = String(episode).padStart(2, '0')
-    const res = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(`${titles[0]} ${ep}`)}`)
-    const data = await res.json()
-    const results = this.parse(data, episode)
-    if (results.length > 0) return results
- 
-    // No results — could be a movie where SubsPlease uses "Movie" not an episode number
-    const res2 = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(titles[0])}`)
-    return this.parse(await res2.json(), null)
+    const season = this.detectSeason(titles)
+    const queries = this.buildQueries(titles, season)
+
+    for (const q of queries) {
+      const results = await this.search(`${q} ${ep}`, episode)
+      if (results.length > 0) return results
+    }
+
+    // Fallback for movies where SubsPlease uses "Movie" not an episode number
+    for (const q of queries) {
+      const results = await this.search(q, null)
+      if (results.length > 0) return results
+    }
+
+    return []
   }
 
   async batch({ titles }) {
     if (!navigator.onLine) return []
-    const res = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(`${titles[0]} Batch`)}`)
-    return this.parse(await res.json(), null)
+    const season = this.detectSeason(titles)
+    const queries = this.buildQueries(titles, season)
+
+    for (const q of queries) {
+      const results = await this.search(`${q} Batch`, null)
+      if (results.length > 0) return results
+    }
+    return []
   }
- 
+
   async movie({ titles }) {
     if (!navigator.onLine) return []
-    const res = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(titles[0])}`)
-    return this.parse(await res.json(), null)
+    const season = this.detectSeason(titles)
+    const queries = this.buildQueries(titles, season)
+
+    for (const q of queries) {
+      const results = await this.search(q, null)
+      if (results.length > 0) return results
+    }
+    return []
   }
 
   async test() {
