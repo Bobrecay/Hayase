@@ -1,65 +1,58 @@
 export default new class SubsPlease {
-  base = 'https://subsplease.org/api/'
+  url = 'https://nyaa.si/'
 
-  async single({ anilistId, titles, episode, fetch: fetchFn }) {
-    let title = titles?.[0] ?? ''
-
-    if (anilistId) {
-      try {
-        const res = await fetch('https://graphql.anilist.co', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-          body: JSON.stringify({
-            query: `query ($id: Int) { Media (id: $id, type: ANIME) { title { romaji } } }`,
-            variables: { id: Number(anilistId) }
-          })
-        })
-        const json = await res.json()
-        title = json?.data?.Media?.title?.romaji ?? title
-      } catch {}
-    }
-
-    const query = title + (episode ? ` ${episode}` : '')
-    const res = await fetchFn(`${this.base}?f=search&tz=America/New_York&s=${encodeURIComponent(query)}`)
-    const data = await res.json()
-
-    if (!data || typeof data !== 'object') return []
-
-    const results = []
-    for (const key in data) {
-      const item = data[key]
-      if (!item.downloads) continue
-      for (const dl of item.downloads) {
-        if (dl.res !== '1080') continue
-        const hash = dl.magnet?.match(/btih:([a-fA-F0-9]+)/i)?.[1]
-        if (!hash) continue
-        results.push({
-          title: `${item.show} - ${item.episode} (1080p)`,
-          link: dl.magnet,
-          hash,
-          seeders: 0,
-          leechers: 0,
-          downloads: 0,
-          size: 0,
-          date: new Date(item.release_date),
-          verified: true,
-          type: 'alt',
-          accuracy: 'high'
-        })
+  parse(xml) {
+    const doc = new DOMParser().parseFromString(xml, 'application/xml')
+    return [...doc.querySelectorAll('item')].map(item => {
+      const get = tag => item.querySelector(tag)?.textContent ?? ''
+      const magnet = get('nyaa\\:magnetLink') || get('magnetLink')
+      const hash = magnet.match(/urn:btih:([a-fA-F0-9]{40}|[a-zA-Z2-7]{32})/i)?.[1]?.toLowerCase()
+      if (!hash) return null
+      return {
+        title: get('title'),
+        link: magnet,
+        hash,
+        size: 0,
+        seeders: Number(get('nyaa\\:seeders') || get('seeders')) || 0,
+        leechers: Number(get('nyaa\\:leechers') || get('leechers')) || 0,
+        downloads: Number(get('nyaa\\:downloads') || get('downloads')) || 0,
+        accuracy: 'high',
+        date: new Date(get('pubDate'))
       }
-    }
-    return results
+    }).filter(Boolean)
   }
 
-  batch = this.single
-  movie = this.single
+  async single({ media, episode }) {
+    if (!navigator.onLine) return []
+    const title = media.title?.romaji ?? media.title?.english ?? ''
+    const ep = String(episode).padStart(2, '0')
+    const q = encodeURIComponent(`[SubsPlease] ${title} - ${ep}`)
+    const res = await fetch(`${this.url}?page=rss&q=${q}&c=1_2&f=0`)
+    return this.parse(await res.text())
+  }
+
+  async batch({ media }) {
+    if (!navigator.onLine) return []
+    const title = media.title?.romaji ?? media.title?.english ?? ''
+    const q = encodeURIComponent(`[SubsPlease] ${title} Batch`)
+    const res = await fetch(`${this.url}?page=rss&q=${q}&c=1_2&f=0`)
+    return this.parse(await res.text())
+  }
+
+  async movie({ media }) {
+    if (!navigator.onLine) return []
+    const title = media.title?.romaji ?? media.title?.english ?? ''
+    const q = encodeURIComponent(`[SubsPlease] ${title}`)
+    const res = await fetch(`${this.url}?page=rss&q=${q}&c=1_2&f=0`)
+    return this.parse(await res.text())
+  }
 
   async test() {
     try {
-      const res = await fetch(this.base + '?f=search&tz=America/New_York&s=One%20Piece')
-      return res.ok
-    } catch {
-      return false
+      if (!(await fetch(this.url)).ok) throw new Error(`Failed to load data from ${this.url}! Is the site down?`)
+      return true
+    } catch (error) {
+      throw new Error(`Could not reach ${this.url}! Does the site work in your region?`)
     }
   }
-}()
+}
