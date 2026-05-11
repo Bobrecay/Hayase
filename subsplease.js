@@ -32,7 +32,7 @@ export default new class SubsPlease {
   async single({ titles, episode, absoluteEpisodeNumber }) {
     if (!navigator.onLine) return []
     const ep = String(episode).padStart(2, '0')
-    const res = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(`${title} ${ep}`)}`)
+    const res = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(`${titles[0]} ${ep}`)}`)
     const results = this.parse(await res.json(), episode)
     if (results.length > 0) return results
     
