@@ -18,7 +18,7 @@ export default new class SubsPlease {
             leechers: 0,
             downloads: 0,
             accuracy: 'high',
-            date: new Date()
+            date: new Date(item.release_date)
           }]
         })
     )
@@ -37,11 +37,7 @@ export default new class SubsPlease {
     return this.parse(await res.json())
   }
 
-  async movie({ titles }) {
-    if (!navigator.onLine) return []
-    const res = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(titles[0])}`)
-    return this.parse(await res.json())
-  }
+  movie=this.single;
 
   async test() {
     try {
