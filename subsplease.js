@@ -31,6 +31,8 @@ export default new class SubsPlease {
 
   async single({ titles, episode }) {
     if (!navigator.onLine) return []
+    console.log(titles)
+    console.log(episode)
     const ep = String(episode).padStart(2, '0')
     const res = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(`${titles[0]} ${ep}`)}`)
     const data = await res.json()
@@ -50,6 +52,7 @@ export default new class SubsPlease {
  
   async movie({ titles }) {
     if (!navigator.onLine) return []
+    console.log("Test")
     const res = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(`${titles[0]} Movie`)}`)
     return this.parse(await res.json(), null)
   }
