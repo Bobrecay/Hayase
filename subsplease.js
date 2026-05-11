@@ -15,16 +15,9 @@ function parseSize(sizeStr) {
   return 0
 }
 
-async function searchRSS(query) {
-  const url = `https://subsplease.org/rss/?r=1080&s=${encodeURIComponent(query)}`
-  const res = await fetch(url)
-  if (!res.ok) throw new Error(`SubsPlease RSS error: ${res.status}`)
-  const text = await res.text()
-
+function parseItems(text) {
   const results = []
-  const items = text.split('<item>').slice(1)
-
-  for (const item of items) {
+  for (const item of text.split('<item>').slice(1)) {
     const title = item.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/)?.[1]
       ?? item.match(/<title>(.*?)<\/title>/)?.[1]
     const magnet = item.match(/<torrent:magnetURI><!\[CDATA\[(.*?)\]\]><\/torrent:magnetURI>/)?.[1]
@@ -48,22 +41,41 @@ async function searchRSS(query) {
       date: pubDate ? new Date(pubDate) : new Date()
     })
   }
-
   return results
 }
 
-// Try each title in order, return first non-empty result.
-// SubsPlease uses romaji names, so we try all titles Hayase provides
-// since we don't know which index is romaji.
-async function searchWithFallback(titles, ep) {
-  const ep2 = ep != null ? String(ep).padStart(2, '0') : ''
-  for (const title of titles) {
-    if (!title) continue
-    const query = ep2 ? `${title} ${ep2}` : title
-    const results = await searchRSS(query)
-    if (results.length > 0) return results
-  }
-  return []
+// Normalize a string for loose comparison: lowercase, strip punctuation/spaces
+function normalize(str) {
+  return str.toLowerCase().replace(/[^a-z0-9]/g, '')
+}
+
+async function search(fetchFn, titles, ep) {
+  // Fetch full 1080p magnet feed — no search param, filter client-side
+  // This avoids relying on SubsPlease's ?s= param which may not work reliably
+  const res = await fetchFn('https://subsplease.org/rss/?r=1080')
+  if (!res.ok) throw new Error(`SubsPlease RSS error: ${res.status}`)
+  const text = await res.text()
+  const all = parseItems(text)
+
+  // Build normalized versions of all titles Hayase gave us
+  const normTitles = (titles ?? []).filter(Boolean).map(normalize)
+
+  // Optional episode filter e.g. "07"
+  const epStr = ep != null ? String(ep).padStart(2, '0') : null
+
+  return all.filter(item => {
+    const normItem = normalize(item.title)
+    // Must match at least one title
+    const titleMatch = normTitles.some(t => normItem.includes(t))
+    if (!titleMatch) return false
+    // If we have an episode number, also filter by it
+    if (epStr) {
+      // RSS titles look like "... - 07 (1080p) ..."
+      const epMatch = item.title.match(/- (\d+) \(/)
+      if (epMatch && epMatch[1].padStart(2, '0') !== epStr) return false
+    }
+    return true
+  })
 }
 
 export default new class {
@@ -76,15 +88,18 @@ export default new class {
     }
   }
 
-  async single({ titles, episode }) {
-    return searchWithFallback(titles ?? [], episode)
+  async single({ titles, episode, fetch: fetchFn }) {
+    if (!navigator.onLine) return []
+    return search(fetchFn, titles, episode)
   }
 
-  async batch({ titles }) {
-    return searchWithFallback(titles ?? [], null)
+  async batch({ titles, fetch: fetchFn }) {
+    if (!navigator.onLine) return []
+    return search(fetchFn, titles, null)
   }
 
-  async movie({ titles }) {
-    return searchWithFallback(titles ?? [], null)
+  async movie({ titles, fetch: fetchFn }) {
+    if (!navigator.onLine) return []
+    return search(fetchFn, titles, null)
   }
 }
