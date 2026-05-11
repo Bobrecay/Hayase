@@ -5,7 +5,7 @@ export default new class SubsPlease {
     if (!navigator.onLine) return []
     const title = media.title?.romaji ?? media.title?.english ?? ''
     const ep = String(episode).padStart(2, '0')
-    const res = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(`${title} ${ep}`)}`)
+    const res = await fetch(`${this.url}?f=search&tz=America/New_York&s=${encodeURIComponent(`${title} ${ep}`)}`)
     const data = await res.json()
     return Object.values(data).flatMap(({ show, episode, downloads = [] }) =>
       downloads.flatMap(({ res, magnet }) => {
@@ -31,7 +31,7 @@ export default new class SubsPlease {
 
   async test() {
     try {
-      if (!(await fetch('https://subsplease.org')).ok) throw new Error(`Failed to load data from ${this.url}! Is the site down?`)
+      if (!(await fetch('https://subsplease.org?f=search&tz=America/New_York&s=')).ok) throw new Error(`Failed to load data from ${this.url}! Is the site down?`)
       return true
     } catch (error) {
       throw new Error(`Could not reach ${this.url}! Does the site work in your region?`)
