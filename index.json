@@ -3,7 +3,7 @@
     "manifestVersion": 2,
     "name": "SubsPlease",
     "id": "subsplease",
-    "version": "1.0.8",
+    "version": "1.0.9",
     "type": "torrent",
     "accuracy": "high",
     "updatePeers": true,
