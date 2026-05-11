@@ -56,7 +56,7 @@ export default new class SubsPlease {
 
   async test() {
     try {
-      const res = await fetch(this.base)
+      const res = await fetch(this.base + '?f=search&tz=America/New_York&s=One%20Piece')
       return res.ok
     } catch {
       return false
