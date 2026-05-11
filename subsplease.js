@@ -37,11 +37,13 @@ export default new class SubsPlease {
     if (results.length > 0) return results
     
     const seasonTitles = titles
-      .filter(t => /\d+(st|nd|rd|th)/i.test(t))
+      .filter(t => /\d+(st|nd|rd|th)|S\d+/i.test(t))
       .map(t => {
-        const match = t.match(/^(.*?)\s*(\d+)(st|nd|rd|th).*/i)
-        if (!match) return null
-        return { base: match[1].trim(), season: `S${match[2]}` }
+        const ordinal = t.match(/^(.*?)\s*(\d+)(st|nd|rd|th).*/i)
+        if (ordinal) return { base: ordinal[1].trim(), season: `S${ordinal[2]}` }
+        const s = t.match(/^(.*?)\s*(S\d+)/i)
+        if (s) return { base: s[1].trim(), season: s[2].toUpperCase() }
+        return null
       })
       .filter(Boolean)
     console.log(seasonTitles)
