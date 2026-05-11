@@ -1,16 +1,16 @@
 export default new class SubsPlease {
   url = atob('aHR0cHM6Ly9zdWJzcGxlYXNlLm9yZy9hcGkv')
 
-  parse(data) {
+  parse(data, resolution) {
     return Object.values(data).flatMap(({ show, episode, downloads = [] }) =>
       downloads
-        .filter(({ res }) => res === '1080')
-        .flatMap(({ magnet }) => {
+        .filter(({ res }) => !resolution || res === resolution)
+        .flatMap(({ res, magnet }) => {
           const match = magnet.match(/urn:btih:([a-fA-F0-9]{40}|[a-zA-Z2-7]{32})/i)
           if (!match) return []
           const xlMatch = magnet.match(/xl=(\d+)/)
           return [{
-            title: `[SubsPlease] ${show} - ${episode} (1080p)`,
+            title: `[SubsPlease] ${show} - ${episode} (${res === 'sd' ? 'SD' : res + 'p'})`,
             link: magnet,
             hash: match[1].toLowerCase(),
             size: xlMatch ? Number(xlMatch[1]) : 0,
@@ -24,23 +24,23 @@ export default new class SubsPlease {
     )
   }
 
-  async single({ titles, episode }) {
+  async single({ titles, episode, resolution }) {
     if (!navigator.onLine) return []
     const ep = String(episode).padStart(2, '0')
     const res = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(`${titles[0]} ${ep}`)}`)
-    return this.parse(await res.json())
+    return this.parse(await res.json(), resolution)
   }
 
-  async batch({ titles }) {
+  async batch({ titles, resolution }) {
     if (!navigator.onLine) return []
     const res = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(titles[0])}`)
-    return this.parse(await res.json())
+    return this.parse(await res.json(), resolution)
   }
 
-  async movie({ titles }) {
+  async movie({ titles, resolution }) {
     if (!navigator.onLine) return []
     const res = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(titles[0])}`)
-    return this.parse(await res.json())
+    return this.parse(await res.json(), resolution)
   }
 
   async test() {
