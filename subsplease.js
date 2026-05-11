@@ -15,8 +15,8 @@ function resLabel(res) {
 async function searchSubsPlease(query, fetch) {
   const url = `${BASE_URL}?f=search&tz=UTC&s=${encodeURIComponent(query)}`
   const res = await fetch(url)
-  if (!res.ok) throw new Error(`SubsPlease API error: ${res.status}`)
-  const data = await res.json()
+  const text = await res.text()
+  const data = JSON.parse(text)
   const results = []
   for (const entry of Object.values(data)) {
     const { show, episode, downloads } = entry
@@ -54,12 +54,10 @@ export default new class SubsPlease {
   }
 
   async test({ fetch }) {
-    try {
-      const res = await fetch(`${BASE_URL}?f=schedule&tz=UTC`)
-      if (!res.ok) throw new Error()
-      return true
-    } catch {
-      throw new Error('Could not reach subsplease.org! Is the site down or blocked in your region?')
-    }
+    const res = await fetch(`${BASE_URL}?f=schedule&tz=UTC`)
+    const text = await res.text()
+    const data = JSON.parse(text)
+    if (!data?.schedule) throw new Error('SubsPlease API returned unexpected data')
+    return true
   }
 }
