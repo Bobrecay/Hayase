@@ -53,7 +53,7 @@ export default new class SubsPlease {
     return searchSubsPlease(title, fetch)
   }
 
-  async test() {
+  async test({ fetch }) {
     try {
       const res = await fetch(`${BASE_URL}?f=schedule&tz=UTC`)
       if (!res.ok) throw new Error()
