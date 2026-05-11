@@ -39,18 +39,19 @@ export default new class SubsPlease {
     const results = this.parse(data, episode)
     if (results.length > 0) return results
 
-    const res = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(`${titles[1]} ${ep}`)}`)
-    const data = await res.json()
-    const results = this.parse(data, episode)
-    if (results.length > 0) return results
+    const res2 = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(`${titles[1]} ${ep}`)}`)
+    const data2 = await res2.json()
+    const results2 = this.parse(data2, episode)
+    if (results2.length > 0) return results2
  
     // No results — could be a movie where SubsPlease uses "Movie" not an episode number
-    const res2 = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(`${titles[0]} Movie`)}`)
-    return this.parse(await res2.json(), null)
+    const res3 = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(`${titles[0]} Movie`)}`)
+    return this.parse(await res3.json(), null)
   }
 
-  async batch({ titles }) {
+  async batch({tvdbId: tvdbId, tvdbEId: tvdbEId, tmdbId: tmdbId, imdbId: imdbId, episode: episode, fetch: fetch}, options) {
     if (!navigator.onLine) return []
+    console.log(tvdbId)
     const res = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(`${titles[0]} Batch`)}`)
     return this.parse(await res.json(), null)
   }
