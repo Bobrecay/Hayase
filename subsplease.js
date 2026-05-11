@@ -32,6 +32,7 @@ export default new class SubsPlease {
   async single({ titles, episode, absoluteEpisodeNumber }) {
     if (!navigator.onLine) return []
     const ep = String(episode).padStart(2, '0')
+    console.log(titles[0])
     const res = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(`${titles[0]} ${ep}`)}`)
     const results = this.parse(await res.json(), episode)
     if (results.length > 0) return results
@@ -46,14 +47,15 @@ export default new class SubsPlease {
     console.log(seasonTitles[0])
     const res2 = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(`${base} ${season} ${ep}`)}`)
     const results2 = this.parse(await res2.json(), episode)
-    console.log(results2)
     if (results2.length > 0) return results2
 
+    const romajiTitle = seasonTitles[0]
+      .filter(t => /\d+(st|nd|rd|th)\s+Season/i.test(t))
+      .map(t => t.replace(/\s*\d+(st|nd|rd|th)\s+Season.*/i, '').trim())
+    console.log(romajiTitle)
     const absEP = String(absoluteEpisodeNumber).padStart(2, '0')
-    console.log(absEP)
-    const res3 = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(`${base} ${absEP}`)}`)
+    const res3 = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(`${romajiTitle} ${absEP}`)}`)
     const results3 = this.parse(await res3.json(), absEP)
-    console.log(results3)
     if (results3.length > 0) return results3
 
     // No results — could be a movie where SubsPlease uses "Movie" not an episode number
