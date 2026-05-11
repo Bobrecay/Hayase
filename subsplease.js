@@ -29,10 +29,15 @@ export default new class SubsPlease {
     })
   }
 
-  async single({ titles, episode }) {
+  async single({ titles, episode, media, anidbEid, tvdbEId, episodeCount, absoluteEpisodeNumber }) {
     if (!navigator.onLine) return []
     console.log(titles)
     console.log(episode)
+    console.log(media)
+    console.log(anidbEid)
+    console.log(tvdbEId)
+    console.log(episodeCount)
+    console.log(absoluteEpisodeNumber)
     const ep = String(episode).padStart(2, '0')
     const res = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(`${titles[0]} ${ep}`)}`)
     const data = await res.json()
