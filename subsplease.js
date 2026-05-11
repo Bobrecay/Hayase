@@ -1,5 +1,5 @@
 export default new class SubsPlease {
-  url = 'https://subsplease.org/api/'
+  url = atob('aHR0cHM6Ly9zdWJzcGxlYXNlLm9yZy9hcGkv')
 
   parse(data) {
     return Object.values(data).flatMap(({ show, episode, downloads = [] }) =>
@@ -21,29 +21,23 @@ export default new class SubsPlease {
     )
   }
 
-  async single({ media, episode, fetch }) {
+  async single({ titles, episode }) {
     if (!navigator.onLine) return []
-    const title = media.title?.romaji ?? media.title?.english ?? ''
     const ep = String(episode).padStart(2, '0')
-    const res = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(`${title} ${ep}`)}`)
-    const data = await res.json()
-    return this.parse(data)
+    const res = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(`${titles[0]} ${ep}`)}`)
+    return this.parse(await res.json())
   }
 
-  async batch({ media, fetch }) {
+  async batch({ titles }) {
     if (!navigator.onLine) return []
-    const title = media.title?.romaji ?? media.title?.english ?? ''
-    const res = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(title)}`)
-    const data = await res.json()
-    return this.parse(data)
+    const res = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(titles[0])}`)
+    return this.parse(await res.json())
   }
 
-  async movie({ media, fetch }) {
+  async movie({ titles }) {
     if (!navigator.onLine) return []
-    const title = media.title?.romaji ?? media.title?.english ?? ''
-    const res = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(title)}`)
-    const data = await res.json()
-    return this.parse(data)
+    const res = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(titles[0])}`)
+    return this.parse(await res.json())
   }
 
   async test() {
