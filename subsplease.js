@@ -49,7 +49,7 @@ export default new class SubsPlease {
     const results2 = this.parse(await res2.json(), episode)
     if (results2.length > 0) return results2
 
-    const romajiTitle = base
+    const romajiTitle = titles
       .filter(t => /\d+(st|nd|rd|th)\s+Season/i.test(t))
       .map(t => t.replace(/\s*\d+(st|nd|rd|th)\s+Season.*/i, '').trim())
     console.log(romajiTitle)
