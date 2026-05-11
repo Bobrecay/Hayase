@@ -34,40 +34,45 @@ export default new class SubsPlease {
     return this.parse(await res.json(), episode)
   }
 
-  buildQueries(titles, season) {
-    const queries = [...titles]
-    // If a season is detected in any title (e.g. "Season 2", "2nd Season"), also try S2 style
-    if (season && season > 1) {
-      const base = titles[0].replace(/\s*(season\s*\d+|\d+(st|nd|rd|th)\s*season|S\d+)\s*/gi, '').trim()
-      queries.push(`${base} S${season}`)
-      queries.push(`${base} Season ${season}`)
-      queries.push(`${base} Part ${season}`)
+  // Strips season words and returns { base, season } e.g. "Overlord IV" -> { base: "Overlord", season: 4 }
+  stripSeason(title) {
+    const patterns = [
+      // "Season 2", "S2"
+      { re: /\s+S(?:eason\s*)?(\d+)$/i, fn: m => Number(m[1]) },
+      // "2nd Season", "3rd Season"
+      { re: /\s+(\d+)(?:st|nd|rd|th)\s+Season$/i, fn: m => Number(m[1]) },
+      // Roman numerals II, III, IV, V, VI, VII, VIII (season 2-8)
+      { re: /\s+(II|III|IV|V|VI|VII|VIII)$/i, fn: m => ({ II:2,III:3,IV:4,V:5,VI:6,VII:7,VIII:8 })[m[1].toUpperCase()] },
+      // "Part 2"
+      { re: /\s+Part\s+(\d+)$/i, fn: m => Number(m[1]) },
+    ]
+    for (const { re, fn } of patterns) {
+      const m = title.match(re)
+      if (m) return { base: title.replace(re, '').trim(), season: fn(m) }
     }
-    return [...new Set(queries)]
-  }
-
-  detectSeason(titles) {
-    for (const title of titles) {
-      const s = title.match(/(?:Season\s*|S)(\d+)/i) || title.match(/(\d+)(?:st|nd|rd|th)\s*Season/i)
-      if (s) return Number(s[1])
-    }
-    return null
+    return { base: title, season: null }
   }
 
   async single({ titles, episode }) {
     if (!navigator.onLine) return []
     const ep = String(episode).padStart(2, '0')
-    const season = this.detectSeason(titles)
-    const queries = this.buildQueries(titles, season)
 
-    for (const q of queries) {
-      const results = await this.search(`${q} ${ep}`, episode)
+    // First try all titles Hayase gave us as-is
+    for (const title of titles) {
+      const results = await this.search(`${title} ${ep}`, episode)
       if (results.length > 0) return results
     }
 
-    // Fallback for movies where SubsPlease uses "Movie" not an episode number
-    for (const q of queries) {
-      const results = await this.search(q, null)
+    // Fallback: strip season from first title and re-add as S2
+    const { base, season } = this.stripSeason(titles[0])
+    if (season && season > 1) {
+      const results = await this.search(`${base} S${season} ${ep}`, episode)
+      if (results.length > 0) return results
+    }
+
+    // Final fallback for movies
+    for (const title of titles) {
+      const results = await this.search(title, null)
       if (results.length > 0) return results
     }
 
@@ -76,25 +81,35 @@ export default new class SubsPlease {
 
   async batch({ titles }) {
     if (!navigator.onLine) return []
-    const season = this.detectSeason(titles)
-    const queries = this.buildQueries(titles, season)
 
-    for (const q of queries) {
-      const results = await this.search(`${q} Batch`, null)
+    for (const title of titles) {
+      const results = await this.search(`${title} Batch`, null)
       if (results.length > 0) return results
     }
+
+    const { base, season } = this.stripSeason(titles[0])
+    if (season && season > 1) {
+      const results = await this.search(`${base} S${season} Batch`, null)
+      if (results.length > 0) return results
+    }
+
     return []
   }
 
   async movie({ titles }) {
     if (!navigator.onLine) return []
-    const season = this.detectSeason(titles)
-    const queries = this.buildQueries(titles, season)
 
-    for (const q of queries) {
-      const results = await this.search(q, null)
+    for (const title of titles) {
+      const results = await this.search(title, null)
       if (results.length > 0) return results
     }
+
+    const { base, season } = this.stripSeason(titles[0])
+    if (season && season > 1) {
+      const results = await this.search(`${base} S${season}`, null)
+      if (results.length > 0) return results
+    }
+
     return []
   }
 
