@@ -19,79 +19,12 @@ async function getRomajiTitle(anilistId, fetchFn) {
   const query = `query ($id: Int) { Media (id: $id, type: ANIME) { title { romaji } } }`
   const res = await fetchFn('https://graphql.anilist.co', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-    },
+    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
     body: JSON.stringify({ query, variables: { id: Number(anilistId) } })
   })
   if (!res.ok) throw new Error(`AniList error: ${res.status}`)
   const json = await res.json()
   return json?.data?.Media?.title?.romaji ?? null
-}
-
-function parseItems(text) {
-  const results = []
-  for (const item of text.split('<item>').slice(1)) {
-    const title = item.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/)?.[1]
-      ?? item.match(/<title>(.*?)<\/title>/)?.[1]
-    const magnet = item.match(/<torrent:magnetURI><!\[CDATA\[(.*?)\]\]><\/torrent:magnetURI>/)?.[1]
-      ?? item.match(/<torrent:magnetURI>(.*?)<\/torrent:magnetURI>/)?.[1]
-    const sizeStr = item.match(/<subsplease:size>(.*?)<\/subsplease:size>/)?.[1]
-    const pubDate = item.match(/<pubDate>(.*?)<\/pubDate>/)?.[1]
-
-    if (!title || !magnet) continue
-    const hash = hashFromMagnet(magnet)
-    if (!hash) continue
-
-    results.push({
-      title,
-      link: magnet,
-      hash,
-      seeders: 0,
-      leechers: 0,
-      downloads: 0,
-      accuracy: 'high',
-      size: parseSize(sizeStr),
-      date: pubDate ? new Date(pubDate) : new Date()
-    })
-  }
-  return results
-}
-
-function normalize(str) {
-  return str.toLowerCase().replace(/[^a-z0-9]/g, '')
-}
-
-async function search(fetchFn, romajiTitle, ep) {
-  const epStr = ep != null ? String(ep).padStart(2, '0') : null
-  const normRomaji = normalize(romajiTitle)
-
-  // Try ?s= search first, fall back to full feed
-  for (const url of [
-    `https://subsplease.org/rss/?r=1080&s=${encodeURIComponent(romajiTitle)}`,
-    `https://subsplease.org/rss/?r=1080`
-  ]) {
-    const res = await fetchFn(url)
-    if (!res.ok) continue
-    const text = await res.text()
-    const items = parseItems(text)
-
-    const filtered = items.filter(item => {
-      const showMatch = item.title.match(/\[SubsPlease\] (.+?) - \d+ \(/)
-      if (!showMatch) return false
-      if (normalize(showMatch[1]) !== normRomaji) return false
-      if (epStr) {
-        const epMatch = item.title.match(/- (\d+) \(/)
-        if (!epMatch || epMatch[1].padStart(2, '0') !== epStr) return false
-      }
-      return true
-    })
-
-    if (filtered.length > 0) return filtered
-  }
-
-  return []
 }
 
 export default new class {
@@ -105,17 +38,33 @@ export default new class {
   }
 
   async single({ anilistId, titles, episode, fetch: fetchFn }) {
-    const romaji = await getRomajiTitle(anilistId, fetchFn)
-    return search(fetchFn, romaji ?? titles?.[0] ?? '', episode)
+    // Step 1: get romaji from AniList
+    let romaji
+    try {
+      romaji = await getRomajiTitle(anilistId, fetchFn)
+    } catch(e) {
+      throw new Error(`AniList lookup failed: ${e.message}`)
+    }
+
+    // Step 2: fetch RSS
+    const url = `https://subsplease.org/rss/?r=1080&s=${encodeURIComponent(romaji ?? titles?.[0] ?? '')}`
+    let text
+    try {
+      const res = await fetchFn(url)
+      text = await res.text()
+    } catch(e) {
+      throw new Error(`RSS fetch failed: ${e.message}`)
+    }
+
+    // Step 3: log the first 500 chars so we can see what we're getting
+    throw new Error(`DEBUG romaji=${romaji} rssPreview=${text?.slice(0, 500)}`)
   }
 
-  async batch({ anilistId, titles, fetch: fetchFn }) {
-    const romaji = await getRomajiTitle(anilistId, fetchFn)
-    return search(fetchFn, romaji ?? titles?.[0] ?? '', null)
+  async batch({ anilistId, titles, episode, fetch: fetchFn }) {
+    return this.single({ anilistId, titles, episode, fetch: fetchFn })
   }
 
-  async movie({ anilistId, titles, fetch: fetchFn }) {
-    const romaji = await getRomajiTitle(anilistId, fetchFn)
-    return search(fetchFn, romaji ?? titles?.[0] ?? '', null)
+  async movie({ anilistId, titles, episode, fetch: fetchFn }) {
+    return this.single({ anilistId, titles, episode, fetch: fetchFn })
   }
 }
