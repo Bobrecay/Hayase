@@ -1,5 +1,5 @@
 export default new class SubsPlease {
-  base = 'https://nyaa.si/?page=rss&q=[SubsPlease]'
+  base = 'https://subsplease.org/rss/?r=1080'
 
   async single({ anilistId, titles, episode, fetch: fetchFn }) {
     let title = titles?.[0] ?? ''
@@ -56,7 +56,7 @@ export default new class SubsPlease {
 
   async test() {
     try {
-      const res = await fetch('https://nyaa.si/?page=rss&q=[SubsPlease]')
+      const res = await fetch(this.base)
       return res.ok
     } catch {
       return false
