@@ -32,18 +32,18 @@ export default new class SubsPlease {
   async single({ titles, episode, absoluteEpisodeNumber }) {
     if (!navigator.onLine) return []
     const ep = String(episode).padStart(2, '0')
+    const res = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(`${title} ${ep}`)}`)
+    const results = this.parse(await res.json(), episode)
+    if (results.length > 0) return results
     
-    for (const title of titles) {
-      const res = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(`${title} ${ep}`)}`)
-      const results = this.parse(await res.json(), episode)
-      console.log(title)
-      console.log(results)
-      if (results.length > 0) return results
-    }
-
     const seasonTitles = titles.filter(t => /S\d+/i.test(t))
     console.log(seasonTitles)
- 
+    for (const title of seasonTitles) {
+      const res2 = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(`${title} ${ep}`)}`)
+      const results2 = this.parse(await res2.json(), episode)
+      if (results2.length > 0) return results2
+    }
+
     // No results — could be a movie where SubsPlease uses "Movie" not an episode number
     const res3 = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(`${titles[0]} Movie`)}`)
     return this.parse(await res3.json(), null)
