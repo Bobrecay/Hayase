@@ -1,5 +1,5 @@
 export default new class SubsPlease {
-  base = 'https://subsplease.org/api/'
+  base = 'https://nyaa.si/?page=rss&q=[SubsPlease]'
 
   async single({ anilistId, titles, episode, fetch: fetchFn }) {
     let title = titles?.[0] ?? ''
