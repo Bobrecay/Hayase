@@ -38,7 +38,7 @@ export default new class SubsPlease {
     if (results.length > 0) return results
  
     // No results — could be a movie where SubsPlease uses "Movie" not an episode number
-    const res2 = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(titles[0])}`)
+    const res2 = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(`${titles[0]} Movie`)}`)
     return this.parse(await res2.json(), null)
   }
 
