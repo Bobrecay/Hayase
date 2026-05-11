@@ -36,6 +36,8 @@ export default new class SubsPlease {
     for (const title of titles) {
       const res = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(`${title} ${ep}`)}`)
       const results = this.parse(await res.json(), episode)
+      console.log(title)
+      console.log(results)
       if (results.length > 0) return results
     }
 
