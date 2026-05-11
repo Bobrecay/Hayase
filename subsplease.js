@@ -46,6 +46,8 @@ export default new class SubsPlease {
         return null
       })
       .filter(Boolean)
+    
+    if (!seasonTitles.length) return []
     const { base, season } = seasonTitles[0]
     const res2 = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(`${base} ${season} ${ep}`)}`)
     const results2 = this.parse(await res2.json(), episode)
@@ -76,10 +78,12 @@ export default new class SubsPlease {
         return null
       })
       .filter(Boolean)
+    
+    if (!seasonTitles.length) return []
     const { base, season } = seasonTitles[0]
     const res2 = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(`${base} ${season} Batch`)}`)
     const results2 = this.parse(await res2.json(), null)
-    if (results2.length > 0) return results2
+    return results2
   }
  
   async movie({ titles }) {
