@@ -1,67 +1,40 @@
-const BASE_URL = 'https://subsplease.org/api/'
-
-function hashFromMagnet(magnet) {
-  const match = magnet.match(/urn:btih:([a-fA-F0-9]{40}|[a-zA-Z2-7]{32})/i)
-  return match ? match[1].toLowerCase() : ''
-}
-
-function resLabel(res) {
-  if (res === '1080') return '1080p'
-  if (res === '720') return '720p'
-  if (res === 'sd') return 'SD'
-  return res
-}
-
-async function searchSubsPlease(query) {
-  const url = `${BASE_URL}?f=search&tz=UTC&s=${encodeURIComponent(query)}`
-  const res = await fetch(url)
-  const text = await res.text()
-  const data = JSON.parse(text)
-  const results = []
-  for (const entry of Object.values(data)) {
-    const { show, episode, downloads } = entry
-    if (!downloads?.length) continue
-    for (const dl of downloads) {
-      const hash = hashFromMagnet(dl.magnet)
-      if (!hash) continue
-      results.push({
-        title: `[SubsPlease] ${show} - ${episode} (${resLabel(dl.res)})`,
-        hash,
-        link: dl.magnet,
-        seeders: 0,
-        leechers: 0,
-        downloads: 0,
-        size: 0,
-        accuracy: 'high',
-        date: new Date(),
-      })
-    }
-  }
-  return results
-}
-
 export default new class SubsPlease {
+  url = 'https://subsplease.org/api/'
+
   async single({ media, episode }) {
     if (!navigator.onLine) return []
     const title = media.title?.romaji ?? media.title?.english ?? ''
     const ep = String(episode).padStart(2, '0')
-    return searchSubsPlease(`${title} ${ep}`)
+    const res = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(`${title} ${ep}`)}`)
+    const data = await res.json()
+    return Object.values(data).flatMap(({ show, episode, downloads = [] }) =>
+      downloads.flatMap(({ res, magnet }) => {
+        const match = magnet.match(/urn:btih:([a-fA-F0-9]{40}|[a-zA-Z2-7]{32})/i)
+        if (!match) return []
+        return [{
+          hash: match[1].toLowerCase(),
+          link: magnet,
+          title: `[SubsPlease] ${show} - ${episode} (${res === 'sd' ? 'SD' : res + 'p'})`,
+          size: 0,
+          seeders: 0,
+          leechers: 0,
+          downloads: 0,
+          accuracy: 'high',
+          date: new Date()
+        }]
+      })
+    )
   }
 
   batch = this.single
-
-  async movie({ media }) {
-    if (!navigator.onLine) return []
-    const title = media.title?.romaji ?? media.title?.english ?? ''
-    return searchSubsPlease(title)
-  }
+  movie = this.single
 
   async test() {
     try {
-      if (!(await fetch(`${BASE_URL}?f=schedule&tz=UTC`)).ok) throw new Error(`Failed to load data from ${BASE_URL}! Is the site down?`)
+      if (!(await fetch(`${this.url}?f=schedule&tz=UTC`)).ok) throw new Error(`Failed to load data from ${this.url}! Is the site down?`)
       return true
     } catch (error) {
-      throw new Error(`Could not reach ${BASE_URL}! Does the site work in your region?`)
+      throw new Error(`Could not reach ${this.url}! Does the site work in your region?`)
     }
   }
 }
