@@ -81,36 +81,14 @@ export default new class SubsPlease {
 
   async batch({ titles }) {
     if (!navigator.onLine) return []
-
-    for (const title of titles) {
-      const results = await this.search(`${title} Batch`, null)
-      if (results.length > 0) return results
-    }
-
-    const { base, season } = this.stripSeason(titles[0])
-    if (season && season > 1) {
-      const results = await this.search(`${base} S${season} Batch`, null)
-      if (results.length > 0) return results
-    }
-
-    return []
+    const res = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(`${titles[0]} Batch`)}`)
+    return this.parse(await res.json(), null)
   }
-
+ 
   async movie({ titles }) {
     if (!navigator.onLine) return []
-
-    for (const title of titles) {
-      const results = await this.search(title, null)
-      if (results.length > 0) return results
-    }
-
-    const { base, season } = this.stripSeason(titles[0])
-    if (season && season > 1) {
-      const results = await this.search(`${base} S${season}`, null)
-      if (results.length > 0) return results
-    }
-
-    return []
+    const res = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(titles[0])}`)
+    return this.parse(await res.json(), null)
   }
 
   async test() {
