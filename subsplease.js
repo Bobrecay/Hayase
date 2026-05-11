@@ -46,13 +46,13 @@ export default new class SubsPlease {
 
     const seasonTitlesTrimmed = seasonTitles.map(t => t.replace(/\s*S\d+.*/i, '').trim())
     const absEP = String(absoluteEpisodeNumber).padStart(2, '0')
+    console.log(absEP)
     console.log(seasonTitlesTrimmed)
     for (const title2 of seasonTitlesTrimmed) {
       const res3 = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(`${title2} ${absEP}`)}`)
       const results3 = this.parse(await res3.json(), episode)
       console.log(title2)
       console.log(results3)
-      console.log(absoluteEpisodeNumber)
       if (results3.length > 0) return results3
     }
 
