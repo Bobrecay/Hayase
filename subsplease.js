@@ -46,7 +46,6 @@ export default new class SubsPlease {
         return null
       })
       .filter(Boolean)
-    console.log(seasonTitles)
     const { base, season } = seasonTitles[0]
     const res2 = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(`${base} ${season} ${ep}`)}`)
     const results2 = this.parse(await res2.json(), episode)
@@ -57,7 +56,6 @@ export default new class SubsPlease {
     const results3 = this.parse(await res3.json(), absEP)
     if (results3.length > 0) return results3
 
-    // No results — could be a movie where SubsPlease uses "Movie" not an episode number
     const res4 = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(`${titles[0]} Movie`)}`)
     return this.parse(await res4.json(), null)
   }
@@ -65,7 +63,23 @@ export default new class SubsPlease {
   async batch({ titles }) {
     if (!navigator.onLine) return []
     const res = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(`${titles[0]} Batch`)}`)
-    return this.parse(await res.json(), null)
+    const results = this.parse(await res.json(), null)
+    if (results.length > 0) return results
+
+    const seasonTitles = titles
+      .filter(t => /\d+(st|nd|rd|th)|S\d+/i.test(t))
+      .map(t => {
+        const ordinal = t.match(/^(.*?)\s*(\d+)(st|nd|rd|th).*/i)
+        if (ordinal) return { base: ordinal[1].trim(), season: `S${ordinal[2]}` }
+        const s = t.match(/^(.*?)\s*(S\d+)/i)
+        if (s) return { base: s[1].trim(), season: s[2].toUpperCase() }
+        return null
+      })
+      .filter(Boolean)
+    const { base, season } = seasonTitles[0]
+    const res2 = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(`${base} ${season} Batch`)}`)
+    const results2 = this.parse(await res2.json(), null)
+    if (results2.length > 0) return results2
   }
  
   async movie({ titles }) {
