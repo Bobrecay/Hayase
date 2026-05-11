@@ -67,7 +67,7 @@ async function search(fetchFn, romajiTitle, ep) {
   const epStr = ep != null ? String(ep).padStart(2, '0') : null
   const normRomaji = normalize(romajiTitle)
 
-  // Try ?s= search first; if it returns nothing, fall back to full feed
+  // Try ?s= search first, fall back to full feed
   for (const url of [
     `https://subsplease.org/rss/?r=1080&s=${encodeURIComponent(romajiTitle)}`,
     `https://subsplease.org/rss/?r=1080`
@@ -77,10 +77,7 @@ async function search(fetchFn, romajiTitle, ep) {
     const text = await res.text()
     const items = parseItems(text)
 
-    // Filter by romaji title match
     const filtered = items.filter(item => {
-      // RSS titles: "[SubsPlease] Maid-san wa Taberu Dake - 07 (1080p) [HASH].mkv"
-      // Extract the show name part between "] " and " - "
       const showMatch = item.title.match(/\[SubsPlease\] (.+?) - \d+ \(/)
       if (!showMatch) return false
       if (normalize(showMatch[1]) !== normRomaji) return false
@@ -108,19 +105,16 @@ export default new class {
   }
 
   async single({ anilistId, titles, episode, fetch: fetchFn }) {
-    if (!navigator.onLine) return []
     const romaji = await getRomajiTitle(anilistId, fetchFn)
     return search(fetchFn, romaji ?? titles?.[0] ?? '', episode)
   }
 
   async batch({ anilistId, titles, fetch: fetchFn }) {
-    if (!navigator.onLine) return []
     const romaji = await getRomajiTitle(anilistId, fetchFn)
     return search(fetchFn, romaji ?? titles?.[0] ?? '', null)
   }
 
   async movie({ anilistId, titles, fetch: fetchFn }) {
-    if (!navigator.onLine) return []
     const romaji = await getRomajiTitle(anilistId, fetchFn)
     return search(fetchFn, romaji ?? titles?.[0] ?? '', null)
   }
