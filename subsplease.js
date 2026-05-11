@@ -1,59 +1,55 @@
-export default new class SubsPlease {
-  base = 'https://subsplease.org/api/'
+export async function search(request, query) {
+  const url = `https://subsplease.org/rss/?t&r=1080`;
+  const xml = await request.text(url);
+  const results = [];
+  const items = xml.split("<item>").slice(1);
+  for (const item of items) {
+    const titleMatch = item.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/);
+    const linkMatch = item.match(/<link>(.*?)<\/link>/);
+    const pubDateMatch = item.match(/<pu
 
-  async single({ titles, episode }) {
-    if (!titles?.length) return []
+# Go to Desktop (or change path if you want)
+cd ~/Desktop
 
-    const query = titles[0] + (episode ? ` ${episode}` : '')
-    const url = `${this.base}?f=search&tz=America/New_York&s=${encodeURIComponent(query)}`
+# Create main folder and extensions folder
+mkdir -p hayase-subsplease-extension/extensions
+cd hayase-subsplease-extension
 
-    const res = await fetch(url)
-    const data = await res.json()
-
-    if (!data || typeof data !== 'object') return []
-
-    return this.map(data)
+# Create subsplease.js
+cat > extensions/subsplease.js << 'EOF'
+export async function search(request, query) {
+  const url = `https://subsplease.org/rss/?t&r=1080`;
+  const xml = await request.text(url);
+  const results = [];
+  const items = xml.split("<item>").slice(1);
+  for (const item of items) {
+    const titleMatch = item.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/);
+    const linkMatch = item.match(/<link>(.*?)<\/link>/);
+    const pubDateMatch = item.match(/<pubDate>(.*?)<\/pubDate>/);
+    if (!titleMatch || !linkMatch) continue;
+    const title = titleMatch[1];
+    const link = linkMatch[1];
+    const pubDate = pubDateMatch ? pubDateMatch[1] : "";
+    if (title.toLowerCase().includes(query.toLowerCase())) {
+      results.push({
+        title,
+        url: link,
+        time: pubDate
+      });
+    }
   }
+  return results;
+}
 
-  batch = this.single
-  movie = this.single
-
-  map(data) {
-    const results = []
-    for (const key in data) {
-      const item = data[key]
-      if (!item.downloads) continue
-
-      for (const download of item.downloads) {
-        if (download.res !== '1080') continue
-
-        const hash = download.magnet?.match(/btih:([a-fA-F0-9]+)/)?.[1]
-        if (!hash) continue
-
-        results.push({
-          title: `${item.show} - ${item.episode} (1080p)`,
-          link: download.magnet,
-          hash,
-          seeders: 0,
-          leechers: 0,
-          downloads: 0,
-          size: 0,
-          date: new Date(item.release_date),
-          verified: true,
-          type: 'alt',
-          accuracy: 'high'
-        })
+export async function detail(request, url) {
+  const html = await request.text(url);
+  const match = html.match(/href="(magnet:\?xt=urn:btih:[^"]+)"/);
+  return {
+    episodes: [
+      {
+        title: "Episode 1",
+        url: match ? match[1] : url
       }
-    }
-    return results
-  }
-
-  async test() {
-    try {
-      const res = await fetch(this.base + '?f=search&tz=America/New_York&s=One%20Piece')
-      return res.ok
-    } catch {
-      return false
-    }
-  }
-}()
+    ]
+  };
+}
