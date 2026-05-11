@@ -38,23 +38,21 @@ export default new class SubsPlease {
     if (results.length > 0) return results
     
     const seasonTitles = titles
-      .filter(t => /S\d+/i.test(t))
+      .filter(t => /\d+(st|nd|rd|th)/i.test(t))
       .map(t => {
-        const match = t.match(/^(.*?)\s*(S\d+)/i)
-        return { base: match[1].trim(), season: match[2].toUpperCase() }
+        const match = t.match(/^(.*?)\s*(\d+)(st|nd|rd|th).*/i)
+        if (!match) return null
+        return { base: match[1].trim(), season: `S${match[2]}` }
       })
+      .filter(Boolean)
     const { base, season } = seasonTitles[0]
     console.log(seasonTitles[0])
     const res2 = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(`${base} ${season} ${ep}`)}`)
     const results2 = this.parse(await res2.json(), episode)
     if (results2.length > 0) return results2
 
-    const romajiTitle = titles
-      .filter(t => /\d+(st|nd|rd|th)\s+Season/i.test(t))
-      .map(t => t.replace(/\s*\d+(st|nd|rd|th)\s+Season.*/i, '').trim())
-    console.log(romajiTitle)
     const absEP = String(absoluteEpisodeNumber).padStart(2, '0')
-    const res3 = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(`${romajiTitle} ${absEP}`)}`)
+    const res3 = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(`${base} ${absEP}`)}`)
     const results3 = this.parse(await res3.json(), absEP)
     if (results3.length > 0) return results3
 
