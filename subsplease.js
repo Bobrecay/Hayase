@@ -6,7 +6,7 @@ export default new class SubsPlease {
 
     if (anilistId) {
       try {
-        const res = await fetchFn('https://graphql.anilist.co', {
+        const res = await fetch('https://graphql.anilist.co', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
           body: JSON.stringify({
