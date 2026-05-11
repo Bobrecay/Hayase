@@ -1,13 +1,30 @@
 export default new class SubsPlease {
   base = 'https://subsplease.org/api/'
 
-  async single({ titles, episode, fetch: fetchFn }) {
+  async getRomaji(anilistId) {
+    const query = `query ($id: Int) { Media (id: $id, type: ANIME) { title { romaji } } }`
+    const res = await fetch('https://graphql.anilist.co', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({ query, variables: { id: Number(anilistId) } })
+    })
+    const json = await res.json()
+    return json?.data?.Media?.title?.romaji ?? null
+  }
+
+  async single({ anilistId, titles, episode }) {
     if (!titles?.length) return []
 
-    const query = titles[0] + (episode ? ` ${episode}` : '')
+    let title = titles[0]
+    if (anilistId) {
+      const romaji = await this.getRomaji(anilistId)
+      if (romaji) title = romaji
+    }
+
+    const query = title + (episode ? ` ${episode}` : '')
     const url = `${this.base}?f=search&tz=America/New_York&s=${encodeURIComponent(query)}`
 
-    const res = await fetchFn(url)
+    const res = await fetch(url)
     const data = await res.json()
 
     if (!data || typeof data !== 'object') return []
