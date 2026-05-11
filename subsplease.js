@@ -36,25 +36,25 @@ export default new class SubsPlease {
     const results = this.parse(await res.json(), episode)
     if (results.length > 0) return results
     
-    const seasonTitles = titles.filter(t => /S\d+/i.test(t))
-    console.log(seasonTitles)
-    for (const title of seasonTitles) {
-      const res2 = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(`${title} ${ep}`)}`)
-      const results2 = this.parse(await res2.json(), episode)
-      if (results2.length > 0) return results2
-    }
+    const seasonTitles = titles
+      .filter(t => /S\d+/i.test(t))
+      .map(t => {
+        const match = t.match(/^(.*?)\s*(S\d+)/i)
+        return { base: match[1].trim(), season: match[2].toUpperCase() }
+      })
+    const { base, season } = seasonTitles[0]
+    console.log(seasonTitles[0])
+    const res2 = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(`${base} ${season} ${ep}`)}`)
+    const results2 = this.parse(await res2.json(), episode)
+    console.log(results2)
+    if (results2.length > 0) return results2
 
-    const seasonTitlesTrimmed = seasonTitles.map(t => t.replace(/\s*S\d+.*/i, '').trim())
     const absEP = String(absoluteEpisodeNumber).padStart(2, '0')
     console.log(absEP)
-    console.log(seasonTitlesTrimmed)
-    for (const title2 of seasonTitlesTrimmed) {
-      const res3 = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(`${title2} ${absEP}`)}`)
-      const results3 = this.parse(await res3.json(), episode)
-      console.log(title2)
-      console.log(results3)
-      if (results3.length > 0) return results3
-    }
+    const res3 = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(`${base} ${absEP}`)}`)
+    const results3 = this.parse(await res3.json(), absEP)
+    console.log(results3)
+    if (results3.length > 0) return results3
 
     // No results — could be a movie where SubsPlease uses "Movie" not an episode number
     const res4 = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(`${titles[0]} Movie`)}`)
