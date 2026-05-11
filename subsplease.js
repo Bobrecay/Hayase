@@ -29,54 +29,17 @@ export default new class SubsPlease {
     })
   }
 
-  async search(query, episode) {
-    const res = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(query)}`)
-    return this.parse(await res.json(), episode)
-  }
-
-  // Strips season words and returns { base, season } e.g. "Overlord IV" -> { base: "Overlord", season: 4 }
-  stripSeason(title) {
-    const patterns = [
-      // "Season 2", "S2"
-      { re: /\s+S(?:eason\s*)?(\d+)$/i, fn: m => Number(m[1]) },
-      // "2nd Season", "3rd Season"
-      { re: /\s+(\d+)(?:st|nd|rd|th)\s+Season$/i, fn: m => Number(m[1]) },
-      // Roman numerals II, III, IV, V, VI, VII, VIII (season 2-8)
-      { re: /\s+(II|III|IV|V|VI|VII|VIII)$/i, fn: m => ({ II:2,III:3,IV:4,V:5,VI:6,VII:7,VIII:8 })[m[1].toUpperCase()] },
-      // "Part 2"
-      { re: /\s+Part\s+(\d+)$/i, fn: m => Number(m[1]) },
-    ]
-    for (const { re, fn } of patterns) {
-      const m = title.match(re)
-      if (m) return { base: title.replace(re, '').trim(), season: fn(m) }
-    }
-    return { base: title, season: null }
-  }
-
   async single({ titles, episode }) {
     if (!navigator.onLine) return []
     const ep = String(episode).padStart(2, '0')
-
-    // First try all titles Hayase gave us as-is
-    for (const title of titles) {
-      const results = await this.search(`${title} ${ep}`, episode)
-      if (results.length > 0) return results
-    }
-
-    // Fallback: strip season from first title and re-add as S2
-    const { base, season } = this.stripSeason(titles[0])
-    if (season && season > 1) {
-      const results = await this.search(`${base} S${season} ${ep}`, episode)
-      if (results.length > 0) return results
-    }
-
-    // Final fallback for movies
-    for (const title of titles) {
-      const results = await this.search(title, null)
-      if (results.length > 0) return results
-    }
-
-    return []
+    const res = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(`${titles[0]} ${ep}`)}`)
+    const data = await res.json()
+    const results = this.parse(data, episode)
+    if (results.length > 0) return results
+ 
+    // No results — could be a movie where SubsPlease uses "Movie" not an episode number
+    const res2 = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(titles[0])}`)
+    return this.parse(await res2.json(), null)
   }
 
   async batch({ titles }) {
