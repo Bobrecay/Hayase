@@ -16,26 +16,22 @@ function parseSize(sizeStr) {
 }
 
 async function getRomajiTitle(anilistId, fetchFn) {
-  const query = `query($id:Int){Media(id:$id){title{romaji}}}`
+  const query = `query ($id: Int) { Media (id: $id, type: ANIME) { title { romaji } } }`
   const res = await fetchFn('https://graphql.anilist.co', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query, variables: { id: anilistId } })
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    },
+    body: JSON.stringify({ query, variables: { id: Number(anilistId) } })
   })
   if (!res.ok) throw new Error(`AniList error: ${res.status}`)
   const json = await res.json()
   return json?.data?.Media?.title?.romaji ?? null
 }
 
-async function searchRSS(fetchFn, romajiTitle, ep) {
-  const url = `https://subsplease.org/rss/?r=1080&s=${encodeURIComponent(romajiTitle)}`
-  const res = await fetchFn(url)
-  if (!res.ok) throw new Error(`SubsPlease RSS error: ${res.status}`)
-  const text = await res.text()
-
-  const epStr = ep != null ? String(ep).padStart(2, '0') : null
+function parseItems(text) {
   const results = []
-
   for (const item of text.split('<item>').slice(1)) {
     const title = item.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/)?.[1]
       ?? item.match(/<title>(.*?)<\/title>/)?.[1]
@@ -47,12 +43,6 @@ async function searchRSS(fetchFn, romajiTitle, ep) {
     if (!title || !magnet) continue
     const hash = hashFromMagnet(magnet)
     if (!hash) continue
-
-    // Filter by episode if provided
-    if (epStr) {
-      const epMatch = title.match(/- (\d+) \(/)
-      if (!epMatch || epMatch[1].padStart(2, '0') !== epStr) continue
-    }
 
     results.push({
       title,
@@ -66,8 +56,45 @@ async function searchRSS(fetchFn, romajiTitle, ep) {
       date: pubDate ? new Date(pubDate) : new Date()
     })
   }
-
   return results
+}
+
+function normalize(str) {
+  return str.toLowerCase().replace(/[^a-z0-9]/g, '')
+}
+
+async function search(fetchFn, romajiTitle, ep) {
+  const epStr = ep != null ? String(ep).padStart(2, '0') : null
+  const normRomaji = normalize(romajiTitle)
+
+  // Try ?s= search first; if it returns nothing, fall back to full feed
+  for (const url of [
+    `https://subsplease.org/rss/?r=1080&s=${encodeURIComponent(romajiTitle)}`,
+    `https://subsplease.org/rss/?r=1080`
+  ]) {
+    const res = await fetchFn(url)
+    if (!res.ok) continue
+    const text = await res.text()
+    const items = parseItems(text)
+
+    // Filter by romaji title match
+    const filtered = items.filter(item => {
+      // RSS titles: "[SubsPlease] Maid-san wa Taberu Dake - 07 (1080p) [HASH].mkv"
+      // Extract the show name part between "] " and " - "
+      const showMatch = item.title.match(/\[SubsPlease\] (.+?) - \d+ \(/)
+      if (!showMatch) return false
+      if (normalize(showMatch[1]) !== normRomaji) return false
+      if (epStr) {
+        const epMatch = item.title.match(/- (\d+) \(/)
+        if (!epMatch || epMatch[1].padStart(2, '0') !== epStr) return false
+      }
+      return true
+    })
+
+    if (filtered.length > 0) return filtered
+  }
+
+  return []
 }
 
 export default new class {
@@ -83,18 +110,18 @@ export default new class {
   async single({ anilistId, titles, episode, fetch: fetchFn }) {
     if (!navigator.onLine) return []
     const romaji = await getRomajiTitle(anilistId, fetchFn)
-    return searchRSS(fetchFn, romaji ?? titles?.[0] ?? '', episode)
+    return search(fetchFn, romaji ?? titles?.[0] ?? '', episode)
   }
 
   async batch({ anilistId, titles, fetch: fetchFn }) {
     if (!navigator.onLine) return []
     const romaji = await getRomajiTitle(anilistId, fetchFn)
-    return searchRSS(fetchFn, romaji ?? titles?.[0] ?? '', null)
+    return search(fetchFn, romaji ?? titles?.[0] ?? '', null)
   }
 
   async movie({ anilistId, titles, fetch: fetchFn }) {
     if (!navigator.onLine) return []
     const romaji = await getRomajiTitle(anilistId, fetchFn)
-    return searchRSS(fetchFn, romaji ?? titles?.[0] ?? '', null)
+    return search(fetchFn, romaji ?? titles?.[0] ?? '', null)
   }
 }
