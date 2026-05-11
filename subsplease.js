@@ -32,7 +32,6 @@ export default new class SubsPlease {
   async single({ titles, episode, absoluteEpisodeNumber }) {
     if (!navigator.onLine) return []
     const ep = String(episode).padStart(2, '0')
-    console.log(titles[0])
     const res = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(`${titles[0]} ${ep}`)}`)
     const results = this.parse(await res.json(), episode)
     if (results.length > 0) return results
@@ -45,8 +44,8 @@ export default new class SubsPlease {
         return { base: match[1].trim(), season: `S${match[2]}` }
       })
       .filter(Boolean)
+    console.log(seasonTitles)
     const { base, season } = seasonTitles[0]
-    console.log(seasonTitles[0])
     const res2 = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(`${base} ${season} ${ep}`)}`)
     const results2 = this.parse(await res2.json(), episode)
     if (results2.length > 0) return results2
