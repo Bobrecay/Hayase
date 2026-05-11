@@ -1,29 +1,54 @@
 export default new class SubsPlease {
-  url = 'https://subsplease.org/api/'
+  base = 'https://subsplease.org/api/'
 
-  async single({ media, episode }) {
-    if (!navigator.onLine) return []
-    const title = media.title?.romaji ?? media.title?.english ?? ''
-    const ep = String(episode).padStart(2, '0')
-    const res = await fetch(`${this.url}?f=search&tz=America/New_York&s=${encodeURIComponent(`${title} ${ep}`)}`)
+  async single({ anilistId, titles, episode, fetch: fetchFn }) {
+    let title = titles?.[0] ?? ''
+
+    if (anilistId) {
+      try {
+        const res = await fetch('https://graphql.anilist.co', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: JSON.stringify({
+            query: `query ($id: Int) { Media (id: $id, type: ANIME) { title { romaji } } }`,
+            variables: { id: Number(anilistId) }
+          })
+        })
+        const json = await res.json()
+        title = json?.data?.Media?.title?.romaji ?? title
+      } catch {}
+    }
+
+    const query = title + (episode ? ` ${episode}` : '')
+    const res = await fetchFn(`${this.base}?f=search&tz=America/New_York&s=${encodeURIComponent(query)}`)
     const data = await res.json()
-    return Object.values(data).flatMap(({ show, episode, downloads = [] }) =>
-      downloads.flatMap(({ res, magnet }) => {
-        const match = magnet.match(/urn:btih:([a-fA-F0-9]{40}|[a-zA-Z2-7]{32})/i)
-        if (!match) return []
-        return [{
-          hash: match[1].toLowerCase(),
-          link: magnet,
-          title: `[SubsPlease] ${show} - ${episode} (${res === 'sd' ? 'SD' : res + 'p'})`,
-          size: 0,
+
+    if (!data || typeof data !== 'object') return []
+
+    const results = []
+    for (const key in data) {
+      const item = data[key]
+      if (!item.downloads) continue
+      for (const dl of item.downloads) {
+        if (dl.res !== '1080') continue
+        const hash = dl.magnet?.match(/btih:([a-fA-F0-9]+)/i)?.[1]
+        if (!hash) continue
+        results.push({
+          title: `${item.show} - ${item.episode} (1080p)`,
+          link: dl.magnet,
+          hash,
           seeders: 0,
           leechers: 0,
           downloads: 0,
-          accuracy: 'high',
-          date: new Date()
-        }]
-      })
-    )
+          size: 0,
+          date: new Date(item.release_date),
+          verified: true,
+          type: 'alt',
+          accuracy: 'high'
+        })
+      }
+    }
+    return results
   }
 
   batch = this.single
@@ -31,10 +56,10 @@ export default new class SubsPlease {
 
   async test() {
     try {
-      if (!(await fetch('https://subsplease.org?f=search&tz=America/New_York&s=')).ok) throw new Error(`Failed to load data from ${this.url}! Is the site down?`)
-      return true
-    } catch (error) {
-      throw new Error(`Could not reach ${this.url}! Does the site work in your region?`)
+      const res = await fetch(this.base + '?f=search&tz=America/New_York&s=One%20Piece')
+      return res.ok
+    } catch {
+      return false
     }
   }
-}
+}()
