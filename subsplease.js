@@ -44,9 +44,17 @@ export default new class SubsPlease {
       if (results2.length > 0) return results2
     }
 
+    const seasonTitlesTrimmed = seasonTitles.map(t => t.replace(/\s*S\d+.*/i, '').trim())
+    console.log(seasonTitlesTrimmed)
+    for (const title2 of seasonTitlesTrimmed) {
+      const res3 = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(`${title2} ${ep}`)}`)
+      const results3 = this.parse(await res3.json(), episode)
+      if (results3.length > 0) return results3
+    }
+
     // No results — could be a movie where SubsPlease uses "Movie" not an episode number
-    const res3 = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(`${titles[0]} Movie`)}`)
-    return this.parse(await res3.json(), null)
+    const res4 = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(`${titles[0]} Movie`)}`)
+    return this.parse(await res4.json(), null)
   }
 
   async batch({ titles }) {
