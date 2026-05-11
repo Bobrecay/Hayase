@@ -40,15 +40,21 @@ async function searchSubsPlease(query, fetch) {
 }
 
 export default new class SubsPlease {
-  async single({ media, episode, fetch }) {
+  async single({ media, episode, fetch } = {}) {
+    if (!navigator.onLine) return []
     const title = media.title?.romaji ?? media.title?.english ?? ''
     const ep = String(episode).padStart(2, '0')
     return searchSubsPlease(`${title} ${ep}`, fetch)
   }
 
-  batch = this.single
+  async batch({ media, fetch } = {}) {
+    if (!navigator.onLine) return []
+    const title = media.title?.romaji ?? media.title?.english ?? ''
+    return searchSubsPlease(title, fetch)
+  }
 
-  async movie({ media, fetch }) {
+  async movie({ media, fetch } = {}) {
+    if (!navigator.onLine) return []
     const title = media.title?.romaji ?? media.title?.english ?? ''
     return searchSubsPlease(title, fetch)
   }
