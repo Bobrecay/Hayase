@@ -29,25 +29,18 @@ export default new class SubsPlease {
     })
   }
 
-  async single({ titles, episode, media, anidbEid, tvdbEId, episodeCount, absoluteEpisodeNumber }) {
+  async single({ titles, episode, absoluteEpisodeNumber }) {
     if (!navigator.onLine) return []
-    console.log(titles)
-    console.log(episode)
-    console.log(media)
-    console.log(anidbEid)
-    console.log(tvdbEId)
-    console.log(episodeCount)
-    console.log(absoluteEpisodeNumber)
     const ep = String(episode).padStart(2, '0')
-    const res = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(`${titles[0]} ${ep}`)}`)
-    const data = await res.json()
-    const results = this.parse(data, episode)
-    if (results.length > 0) return results
+    
+    for (const title of titles) {
+      const res = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(`${title} ${ep}`)}`)
+      const results = this.parse(await res.json(), episode)
+      if (results.length > 0) return results
+    }
 
-    const res2 = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(`${titles[1]} ${ep}`)}`)
-    const data2 = await res2.json()
-    const results2 = this.parse(data2, episode)
-    if (results2.length > 0) return results2
+    const seasonTitles = titles.filter(t => /S\d+/i.test(t))
+    console.log(seasonTitles)
  
     // No results — could be a movie where SubsPlease uses "Movie" not an episode number
     const res3 = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(`${titles[0]} Movie`)}`)
