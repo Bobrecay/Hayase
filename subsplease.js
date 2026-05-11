@@ -36,17 +36,8 @@ export default new class SubsPlease {
     return this.parse(await res.json(), episode)
   }
 
-  async batch({ titles }) {
-    if (!navigator.onLine) return []
-    const res = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(titles[0])}`)
-    return this.parse(await res.json(), null)
-  }
-
-  async movie({ titles }) {
-    if (!navigator.onLine) return []
-    const res = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(titles[0])}`)
-    return this.parse(await res.json(), null)
-  }
+  batch=this.single;
+  movie=this.single;
 
   async test() {
     try {
