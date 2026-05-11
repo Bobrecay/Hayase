@@ -1,63 +1,67 @@
-const mappings = fetch("https://subsplease.org/api/").then(res => res.json()), m = BigInt("1735689600000");
+const BASE_URL = 'https://subsplease.org/api/'
 
-function idToInfo(id) {
-  let r = BigInt(id);
-  const i = (r >> 8n) + m, n = r >> 4n & BigInt(15), o = r & BigInt(15);
-  return {
-    time: Number(i),
-    type: Number(n),
-    increment: Number(o)
-  };
+function hashFromMagnet(magnet) {
+  const match = magnet.match(/urn:btih:([a-fA-F0-9]{40}|[a-zA-Z2-7]{32})/i)
+  return match ? match[1].toLowerCase() : ''
 }
 
-export default new class NekoBT {
-  url=atob("aHR0cHM6Ly9uZWtvYnQudG8vYXBpL3YxLw==");
-  async _media({tvdbId: tvdbId, tmdbId: tmdbId, imdbId: imdbId, fetch: fetch}) {
-    const map = await mappings, nekoID = map.tvdb[tvdbId] ?? map.tmdb[tmdbId] ?? map.imdb[imdbId];
-    if (!nekoID) throw new Error("No NekoBT mapping found for provided anime.");
-    const res = await fetch(this.url + `media/${nekoID}`), json = await res.json();
-    if (json.error) throw new Error("NekoBT: " + json.message);
-    return {
-      nekoID: nekoID,
-      data: json.data
-    };
-  }
-  _map(entries, batch = !1, high = !0) {
-    return entries?.data?.results?.map(entry => ({
-      title: entry.title,
-      link: `${this.url}torrents/${entry.id}/download?public=true`,
-      seeders: Number(entry.seeders),
-      leechers: Number(entry.leechers),
-      downloads: Number(entry.completed),
-      hash: entry.infohash,
-      size: Number(entry.filesize),
-      accuracy: high ? "high" : "medium",
-      type: (entry.level ?? 0) >= 3 ? "alt" : void 0,
-      date: new Date(idToInfo(entry.id).time)
-    })) ?? [];
-  }
-  async single({tvdbId: tvdbId, tvdbEId: tvdbEId, tmdbId: tmdbId, imdbId: imdbId, episode: episode, fetch: fetch}, options) {
-    if (!navigator.onLine) return [];
-    const {data: data, nekoID: nekoID} = await this._media({
-      tvdbId: tvdbId,
-      tmdbId: tmdbId,
-      imdbId: imdbId,
-      fetch: fetch
-    }), ep = data?.episodes?.find(ep => ep.tvdbId === tvdbEId) ?? data?.episodes?.find(ep => ep.episode === episode);
-    let searchURL = `${this.url}torrents/search?media_id=${nekoID}&fansub_lang=en%2Cenm&sub_lang=en%2Cenm`;
-    ep?.id && (searchURL += `&episode_ids=${ep.id}`);
-    const res = await fetch(searchURL), json = await res.json();
-    if (json.error) throw new Error("NekoBT: " + json.message);
-    return this._map(json, !!tvdbEId);
-  }
-  batch=this.single;
-  movie=this.single;
-  async test() {
-    try {
-      if (!(await fetch(this.url + "announcements")).ok) throw new Error(`Failed to load data from ${this.url}! Is the site down?`);
-      return !0;
-    } catch (error) {
-      throw new Error(`Could not reach ${this.url}! Does the site work in your region?`);
+function resLabel(res) {
+  if (res === '1080') return '1080p'
+  if (res === '720') return '720p'
+  if (res === 'sd') return 'SD'
+  return res
+}
+
+async function searchSubsPlease(query) {
+  const url = `${BASE_URL}?f=search&tz=UTC&s=${encodeURIComponent(query)}`
+  const res = await fetch(url)
+  const text = await res.text()
+  const data = JSON.parse(text)
+  const results = []
+  for (const entry of Object.values(data)) {
+    const { show, episode, downloads } = entry
+    if (!downloads?.length) continue
+    for (const dl of downloads) {
+      const hash = hashFromMagnet(dl.magnet)
+      if (!hash) continue
+      results.push({
+        title: `[SubsPlease] ${show} - ${episode} (${resLabel(dl.res)})`,
+        hash,
+        link: dl.magnet,
+        seeders: 0,
+        leechers: 0,
+        downloads: 0,
+        size: 0,
+        accuracy: 'high',
+        date: new Date(),
+      })
     }
   }
-};
+  return results
+}
+
+export default new class SubsPlease {
+  async single({ media, episode }) {
+    if (!navigator.onLine) return []
+    const title = media.title?.romaji ?? media.title?.english ?? ''
+    const ep = String(episode).padStart(2, '0')
+    return searchSubsPlease(`${title} ${ep}`)
+  }
+
+  batch = this.single
+
+  async movie({ media }) {
+    if (!navigator.onLine) return []
+    const title = media.title?.romaji ?? media.title?.english ?? ''
+    return searchSubsPlease(title)
+  }
+
+  async test() {
+    try {
+      if (!(await fetch(`${BASE_URL}?f=schedule&tz=UTC`)).ok) throw new Error(`Failed to load data from ${BASE_URL}! Is the site down?`)
+      return true
+    } catch (error) {
+      throw new Error(`Could not reach ${BASE_URL}! Does the site work in your region?`)
+    }
+  }
+}
