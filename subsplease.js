@@ -1,70 +1,59 @@
-function hashFromMagnet(magnet) {
-  const match = magnet.match(/urn:btih:([a-fA-F0-9]{40}|[a-zA-Z2-7]{32})/i)
-  return match ? match[1].toLowerCase() : ''
-}
+export default new class SubsPlease {
+  base = 'https://subsplease.org/api/'
 
-function parseSize(sizeStr) {
-  if (!sizeStr) return 0
-  const match = sizeStr.match(/([\d.]+)\s*(GiB|MiB|KiB|GB|MB|KB)/i)
-  if (!match) return 0
-  const num = parseFloat(match[1])
-  const unit = match[2].toUpperCase()
-  if (unit === 'GIB' || unit === 'GB') return Math.round(num * 1024 * 1024 * 1024)
-  if (unit === 'MIB' || unit === 'MB') return Math.round(num * 1024 * 1024)
-  if (unit === 'KIB' || unit === 'KB') return Math.round(num * 1024)
-  return 0
-}
+  async single({ titles, episode }) {
+    if (!titles?.length) return []
 
-async function getRomajiTitle(anilistId, fetchFn) {
-  const query = `query ($id: Int) { Media (id: $id, type: ANIME) { title { romaji } } }`
-  const res = await fetchFn('https://graphql.anilist.co', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-    body: JSON.stringify({ query, variables: { id: Number(anilistId) } })
-  })
-  if (!res.ok) throw new Error(`AniList error: ${res.status}`)
-  const json = await res.json()
-  return json?.data?.Media?.title?.romaji ?? null
-}
+    const query = titles[0] + (episode ? ` ${episode}` : '')
+    const url = `${this.base}?f=search&tz=America/New_York&s=${encodeURIComponent(query)}`
 
-export default new class {
+    const res = await fetch(url)
+    const data = await res.json()
+
+    if (!data || typeof data !== 'object') return []
+
+    return this.map(data)
+  }
+
+  batch = this.single
+  movie = this.single
+
+  map(data) {
+    const results = []
+    for (const key in data) {
+      const item = data[key]
+      if (!item.downloads) continue
+
+      for (const download of item.downloads) {
+        if (download.res !== '1080') continue
+
+        const hash = download.magnet?.match(/btih:([a-fA-F0-9]+)/)?.[1]
+        if (!hash) continue
+
+        results.push({
+          title: `${item.show} - ${item.episode} (1080p)`,
+          link: download.magnet,
+          hash,
+          seeders: 0,
+          leechers: 0,
+          downloads: 0,
+          size: 0,
+          date: new Date(item.release_date),
+          verified: true,
+          type: 'alt',
+          accuracy: 'high'
+        })
+      }
+    }
+    return results
+  }
+
   async test() {
     try {
-      const res = await fetch('https://subsplease.org/rss/?r=1080')
+      const res = await fetch(this.base + '?f=search&tz=America/New_York&s=One%20Piece')
       return res.ok
     } catch {
       return false
     }
   }
-
-  async single({ anilistId, titles, episode, fetch: fetchFn }) {
-    // Step 1: get romaji from AniList
-    let romaji
-    try {
-      romaji = await getRomajiTitle(anilistId, fetchFn)
-    } catch(e) {
-      throw new Error(`AniList lookup failed: ${e.message}`)
-    }
-
-    // Step 2: fetch RSS
-    const url = `https://subsplease.org/rss/?r=1080&s=${encodeURIComponent(romaji ?? titles?.[0] ?? '')}`
-    let text
-    try {
-      const res = await fetchFn(url)
-      text = await res.text()
-    } catch(e) {
-      throw new Error(`RSS fetch failed: ${e.message}`)
-    }
-
-    // Step 3: log the first 500 chars so we can see what we're getting
-    throw new Error(`DEBUG romaji=${romaji} rssPreview=${text?.slice(0, 500)}`)
-  }
-
-  async batch({ anilistId, titles, episode, fetch: fetchFn }) {
-    return this.single({ anilistId, titles, episode, fetch: fetchFn })
-  }
-
-  async movie({ anilistId, titles, episode, fetch: fetchFn }) {
-    return this.single({ anilistId, titles, episode, fetch: fetchFn })
-  }
-}
+}()
