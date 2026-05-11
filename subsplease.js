@@ -50,7 +50,7 @@ export default new class SubsPlease {
  
   async movie({ titles }) {
     if (!navigator.onLine) return []
-    const res = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(titles[0])}`)
+    const res = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(`${titles[0]} Movie`)}`)
     return this.parse(await res.json(), null)
   }
 
