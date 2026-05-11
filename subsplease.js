@@ -1,5 +1,5 @@
 export default new class SubsPlease {
-  base = 'https://subsplease.org/rss/?r=1080'
+  base = 'https://nekobt.to/api/v1/'
 
   async single({ anilistId, titles, episode, fetch: fetchFn }) {
     let title = titles?.[0] ?? ''
