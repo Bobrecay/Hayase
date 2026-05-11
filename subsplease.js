@@ -19,7 +19,7 @@ export default new class SubsPlease {
             link: magnet,
             hash: match[1].toLowerCase(),
             size: xlMatch ? Number(xlMatch[1]) : 0,
-            seeders: 0,
+            seeders: 5000,
             leechers: 0,
             downloads: 0,
             accuracy: 'high',
