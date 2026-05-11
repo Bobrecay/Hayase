@@ -3,24 +3,22 @@ export default new class SubsPlease {
 
   parse(data) {
     return Object.values(data).flatMap(({ show, episode, downloads = [] }) =>
-      downloads
-        .filter(({ res }) => res === '1080')
-        .flatMap(({ magnet }) => {
-          const match = magnet.match(/urn:btih:([a-fA-F0-9]{40}|[a-zA-Z2-7]{32})/i)
-          if (!match) return []
-          const xlMatch = magnet.match(/xl=(\d+)/)
-          return [{
-            title: `[SubsPlease] ${show} - ${episode} (1080p)`,
-            link: magnet,
-            hash: match[1].toLowerCase(),
-            size: xlMatch ? Number(xlMatch[1]) : 0,
-            seeders: 0,
-            leechers: 0,
-            downloads: 0,
-            accuracy: 'high',
-            date: new Date()
-          }]
-        })
+      downloads.flatMap(({ res, magnet }) => {
+        const match = magnet.match(/urn:btih:([a-fA-F0-9]{40}|[a-zA-Z2-7]{32})/i)
+        if (!match) return []
+        const xlMatch = magnet.match(/xl=(\d+)/)
+        return [{
+          title: `[SubsPlease] ${show} - ${episode} (${res === 'sd' ? 'SD' : res + 'p'})`,
+          link: magnet,
+          hash: match[1].toLowerCase(),
+          size: xlMatch ? Number(xlMatch[1]) : 0,
+          seeders: 0,
+          leechers: 0,
+          downloads: 0,
+          accuracy: 'high',
+          date: new Date()
+        }]
+      })
     )
   }
 
