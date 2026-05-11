@@ -5,7 +5,7 @@ export default new class SubsPlease {
     const epStr = episode != null ? String(episode).padStart(2, '0') : null
     return Object.values(data).flatMap(({ show, episode: itemEp, release_date, downloads = [] }) => {
       if (epStr) {
-        const itemEpStr = String(itemEp).padStart(2, '0')
+        const itemEpStr = String(itemEp).replace(/v\d+$/i, '').padStart(2, '0')
         if (itemEpStr !== epStr) return []
       }
       return downloads
