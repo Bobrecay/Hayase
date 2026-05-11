@@ -15,8 +15,27 @@ function parseSize(sizeStr) {
   return 0
 }
 
-function parseItems(text) {
+async function getRomajiTitle(anilistId, fetchFn) {
+  const query = `query($id:Int){Media(id:$id){title{romaji}}}`
+  const res = await fetchFn('https://graphql.anilist.co', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query, variables: { id: anilistId } })
+  })
+  if (!res.ok) throw new Error(`AniList error: ${res.status}`)
+  const json = await res.json()
+  return json?.data?.Media?.title?.romaji ?? null
+}
+
+async function searchRSS(fetchFn, romajiTitle, ep) {
+  const url = `https://subsplease.org/rss/?r=1080&s=${encodeURIComponent(romajiTitle)}`
+  const res = await fetchFn(url)
+  if (!res.ok) throw new Error(`SubsPlease RSS error: ${res.status}`)
+  const text = await res.text()
+
+  const epStr = ep != null ? String(ep).padStart(2, '0') : null
   const results = []
+
   for (const item of text.split('<item>').slice(1)) {
     const title = item.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/)?.[1]
       ?? item.match(/<title>(.*?)<\/title>/)?.[1]
@@ -28,6 +47,12 @@ function parseItems(text) {
     if (!title || !magnet) continue
     const hash = hashFromMagnet(magnet)
     if (!hash) continue
+
+    // Filter by episode if provided
+    if (epStr) {
+      const epMatch = title.match(/- (\d+) \(/)
+      if (!epMatch || epMatch[1].padStart(2, '0') !== epStr) continue
+    }
 
     results.push({
       title,
@@ -41,41 +66,8 @@ function parseItems(text) {
       date: pubDate ? new Date(pubDate) : new Date()
     })
   }
+
   return results
-}
-
-// Normalize a string for loose comparison: lowercase, strip punctuation/spaces
-function normalize(str) {
-  return str.toLowerCase().replace(/[^a-z0-9]/g, '')
-}
-
-async function search(fetchFn, titles, ep) {
-  // Fetch full 1080p magnet feed — no search param, filter client-side
-  // This avoids relying on SubsPlease's ?s= param which may not work reliably
-  const res = await fetchFn('https://subsplease.org/rss/?r=1080')
-  if (!res.ok) throw new Error(`SubsPlease RSS error: ${res.status}`)
-  const text = await res.text()
-  const all = parseItems(text)
-
-  // Build normalized versions of all titles Hayase gave us
-  const normTitles = (titles ?? []).filter(Boolean).map(normalize)
-
-  // Optional episode filter e.g. "07"
-  const epStr = ep != null ? String(ep).padStart(2, '0') : null
-
-  return all.filter(item => {
-    const normItem = normalize(item.title)
-    // Must match at least one title
-    const titleMatch = normTitles.some(t => normItem.includes(t))
-    if (!titleMatch) return false
-    // If we have an episode number, also filter by it
-    if (epStr) {
-      // RSS titles look like "... - 07 (1080p) ..."
-      const epMatch = item.title.match(/- (\d+) \(/)
-      if (epMatch && epMatch[1].padStart(2, '0') !== epStr) return false
-    }
-    return true
-  })
 }
 
 export default new class {
@@ -88,18 +80,21 @@ export default new class {
     }
   }
 
-  async single({ titles, episode, fetch: fetchFn }) {
+  async single({ anilistId, titles, episode, fetch: fetchFn }) {
     if (!navigator.onLine) return []
-    return search(fetchFn, titles, episode)
+    const romaji = await getRomajiTitle(anilistId, fetchFn)
+    return searchRSS(fetchFn, romaji ?? titles?.[0] ?? '', episode)
   }
 
-  async batch({ titles, fetch: fetchFn }) {
+  async batch({ anilistId, titles, fetch: fetchFn }) {
     if (!navigator.onLine) return []
-    return search(fetchFn, titles, null)
+    const romaji = await getRomajiTitle(anilistId, fetchFn)
+    return searchRSS(fetchFn, romaji ?? titles?.[0] ?? '', null)
   }
 
-  async movie({ titles, fetch: fetchFn }) {
+  async movie({ anilistId, titles, fetch: fetchFn }) {
     if (!navigator.onLine) return []
-    return search(fetchFn, titles, null)
+    const romaji = await getRomajiTitle(anilistId, fetchFn)
+    return searchRSS(fetchFn, romaji ?? titles?.[0] ?? '', null)
   }
 }
