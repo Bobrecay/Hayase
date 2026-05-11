@@ -33,7 +33,13 @@ export default new class SubsPlease {
     if (!navigator.onLine) return []
     const ep = String(episode).padStart(2, '0')
     const res = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(`${titles[0]} ${ep}`)}`)
-    return this.parse(await res.json(), episode)
+    const data = await res.json()
+    const results = this.parse(data, episode)
+    if (results.length > 0) return results
+ 
+    // No results — could be a movie where SubsPlease uses "Movie" not an episode number
+    const res2 = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(titles[0])}`)
+    return this.parse(await res2.json(), null)
   }
 
   async batch({ titles }) {
@@ -44,7 +50,7 @@ export default new class SubsPlease {
  
   async movie({ titles }) {
     if (!navigator.onLine) return []
-    const res = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(`${titles[0]} Movie`)}`)
+    const res = await fetch(`${this.url}?f=search&tz=UTC&s=${encodeURIComponent(titles[0])}`)
     return this.parse(await res.json(), null)
   }
 
