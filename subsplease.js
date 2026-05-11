@@ -1,5 +1,5 @@
 export default new class SubsPlease {
-  base = 'https://nekobt.to/api/v1/'
+  base = 'https://subsplease.org/api/'
 
   async single({ anilistId, titles, episode, fetch: fetchFn }) {
     let title = titles?.[0] ?? ''
