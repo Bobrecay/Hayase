@@ -53,11 +53,15 @@ export default new class SubsPlease {
     return searchSubsPlease(title, fetch)
   }
 
-  async test({ fetch }) {
-    const res = await fetch(`${BASE_URL}?f=schedule&tz=UTC`)
-    const text = await res.text()
-    const data = JSON.parse(text)
-    if (!data?.schedule) throw new Error('SubsPlease API returned unexpected data')
-    return true
+  async test() {
+    try {
+      const res = await fetch(`${BASE_URL}?f=schedule&tz=UTC`)
+      const text = await res.text()
+      const data = JSON.parse(text)
+      if (!data?.schedule) throw new Error()
+      return true
+    } catch {
+      throw new Error('Could not reach subsplease.org! Is the site down or blocked in your region?')
+    }
   }
 }
