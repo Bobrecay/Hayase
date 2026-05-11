@@ -7,7 +7,6 @@
     "accuracy": "high",
     "ratio": 0,
     "media": "sub",
-    "updatePeers": true,
     "languages": ["US"],
     "icon": "https://subsplease.org/favicon.ico",
     "update": "https://raw.githubusercontent.com/Bobrecay/Hayase/main/index.json",
